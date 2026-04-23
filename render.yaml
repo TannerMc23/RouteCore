@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: routecore-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
