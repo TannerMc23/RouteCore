@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RouteCore — Logistics CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --rc-bg: #0a0c10;
+    --rc-surface: #12151c;
+    --rc-card: #1a1e28;
+    --rc-border: #252a38;
+    --rc-text: #e8eaf0;
+    --rc-muted: #6b7280;
+    --rc-accent: #3b82f6;
+    --rc-pending-bg: #2d1f00; --rc-pending-text: #f59e0b; --rc-pending-border: #92400e;
+    --rc-transit-bg: #0d1f3c; --rc-transit-text: #60a5fa; --rc-transit-border: #1e40af;
+    --rc-delivered-bg: #0d2818; --rc-delivered-text: #34d399; --rc-delivered-border: #065f46;
+  }
+  body { background: var(--rc-bg); color: var(--rc-text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+
+  /* ── Topbar ── */
+  .topbar { background: var(--rc-surface); border-bottom: 1px solid var(--rc-border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 50; }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-icon { width: 28px; height: 28px; background: var(--rc-accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--rc-muted); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; display: inline-block; margin-right: 6px; }
+  .status-dot.offline { background: #f87171; }
+
+  /* ── Layout ── */
+  .main { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 56px); }
+  .sidebar { background: var(--rc-surface); border-right: 1px solid var(--rc-border); padding: 20px 0; position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto; }
+  .sidebar-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--rc-muted); text-transform: uppercase; margin-bottom: 8px; padding: 0 24px; }
+  .sidebar-section { margin-bottom: 24px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 16px; margin: 0 8px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--rc-muted); cursor: pointer; transition: all 0.15s; }
+  .nav-item:hover { background: var(--rc-card); color: var(--rc-text); }
+  .nav-item.active { background: rgba(59,130,246,0.12); color: var(--rc-accent); }
+  .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* ── Content ── */
+  .content { padding: 28px; overflow: auto; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-sub { font-size: 13px; color: var(--rc-muted); margin-top: 3px; }
+
+  /* ── Stats ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 10px; padding: 16px; }
+  .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--rc-muted); text-transform: uppercase; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; font-family: 'IBM Plex Mono', monospace; }
+  .stat-sub { font-size: 12px; color: var(--rc-muted); margin-top: 4px; }
+
+  /* ── Panels ── */
+  .panel { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 12px; margin-bottom: 20px; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--rc-border); display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 14px; font-weight: 700; }
+  .panel-body { padding: 20px; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'Syne', sans-serif; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--rc-accent); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #2563eb; }
+  .btn-ghost { background: transparent; color: var(--rc-muted); border: 1px solid var(--rc-border); }
+  .btn-ghost:hover { background: var(--rc-surface); color: var(--rc-text); }
+  .btn-danger { background: transparent; color: #f87171; border: 1px solid #2d1515; font-size: 12px; padding: 5px 10px; }
+  .btn-danger:hover:not(:disabled) { background: #1f0a0a; }
+  .btn-edit { background: transparent; color: #60a5fa; border: 1px solid #0d1f3c; font-size: 12px; padding: 5px 10px; }
+  .btn-edit:hover { background: #0d1f3c; }
+
+  /* ── Forms ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--rc-muted); }
+  .form-input, .form-select { background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 7px; padding: 9px 12px; font-size: 13px; color: var(--rc-text); font-family: 'Syne', sans-serif; width: 100%; outline: none; transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus { border-color: var(--rc-accent); }
+  .form-select option { background: var(--rc-surface); }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--rc-muted); border-bottom: 1px solid var(--rc-border); }
+  tbody tr { border-bottom: 1px solid rgba(37,42,56,0.6); transition: background 0.12s; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 12px 14px; vertical-align: middle; }
+  .id-cell { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--rc-muted); }
+  .route-cell { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+  .route-arrow { color: var(--rc-muted); font-size: 11px; }
+  .actions { display: flex; gap: 6px; }
+
+  /* ── Badges ── */
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; border: 1px solid; }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  .badge-pending   { background: var(--rc-pending-bg);   color: var(--rc-pending-text);   border-color: var(--rc-pending-border); }
+  .badge-transit   { background: var(--rc-transit-bg);   color: var(--rc-transit-text);   border-color: var(--rc-transit-border); }
+  .badge-delivered { background: var(--rc-delivered-bg); color: var(--rc-delivered-text); border-color: var(--rc-delivered-border); }
+
+  /* ── Filter bar ── */
+  .filter-bar { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 4px; }
+  .filter-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--rc-border); background: transparent; color: var(--rc-muted); cursor: pointer; transition: all 0.15s; font-family: 'Syne', sans-serif; }
+  .filter-btn:hover { color: var(--rc-text); border-color: #4b5563; }
+  .filter-btn.f-all       { background: rgba(255,255,255,0.07); color: var(--rc-text); border-color: #4b5563; }
+  .filter-btn.f-pending   { background: var(--rc-pending-bg);   color: var(--rc-pending-text);   border-color: var(--rc-pending-border); }
+  .filter-btn.f-transit   { background: var(--rc-transit-bg);   color: var(--rc-transit-text);   border-color: var(--rc-transit-border); }
+  .filter-btn.f-delivered { background: var(--rc-delivered-bg); color: var(--rc-delivered-text); border-color: var(--rc-delivered-border); }
+
+  /* ── Empty / Loading states ── */
+  .empty-state { text-align: center; padding: 48px; color: var(--rc-muted); font-size: 13px; }
+  .loading-row td { color: var(--rc-muted); font-style: italic; text-align: center; padding: 32px; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.5); transform: translateY(80px); opacity: 0; transition: all 0.3s cubic-bezier(.34,1.56,.64,1); z-index: 999; display: flex; align-items: center; gap: 10px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Edit modal ── */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 14px; padding: 24px; width: 440px; max-width: 92vw; }
+  .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+  /* ── Analytics bars ── */
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .bar-label { font-size: 12px; color: var(--rc-muted); width: 76px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: var(--rc-surface); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .bar-count { font-size: 13px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; min-width: 20px; text-align: right; }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    RouteCore
+  </div>
+  <div class="topbar-right">
+    <span id="api-status"><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting…</span></span>
+    <span>v1.0.0</span>
+  </div>
+</div>
+
+<!-- ── Main layout ── -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Operations</div>
+      <div class="nav-item active" id="nav-shipments" onclick="setView('shipments')">
+        <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        Shipments
+      </div>
+      <div class="nav-item" id="nav-customers" onclick="setView('customers')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        Customers
+      </div>
+      <div class="nav-item" id="nav-analytics" onclick="setView('analytics')">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">System</div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Documentation
+      </div>
+    </div>
+  </div>
+
+  <!-- Content area -->
+  <div class="content">
+
+    <!-- ══ SHIPMENTS VIEW ══ -->
+    <div id="view-shipments">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Shipment Dashboard</div>
+          <div class="page-sub">Manage and track all active shipments</div>
+        </div>
+        <button class="btn btn-primary" onclick="toggleForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Shipment
+        </button>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="s-total">—</div><div class="stat-sub">All shipments</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="s-pending" style="color:var(--rc-pending-text)">—</div><div class="stat-sub">Awaiting pickup</div></div>
+        <div class="stat-card"><div class="stat-label">In Transit</div><div class="stat-value" id="s-transit" style="color:var(--rc-transit-text)">—</div><div class="stat-sub">En route</div></div>
+        <div class="stat-card"><div class="stat-label">Delivered</div><div class="stat-value" id="s-delivered" style="color:var(--rc-delivered-text)">—</div><div class="stat-sub">Completed</div></div>
+      </div>
+
+      <!-- Add form -->
+      <div class="panel" id="add-form-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title">New Shipment</div>
+          <button class="btn btn-ghost" onclick="toggleForm()">Cancel</button>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Customer ID</label>
+              <input class="form-input" id="f-cid" placeholder="e.g. CUST-001" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="form-select" id="f-status">
+                <option value="Pending">Pending</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Origin</label>
+              <input class="form-input" id="f-origin" placeholder="City, Country" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Destination</label>
+              <input class="form-input" id="f-dest" placeholder="City, Country" />
+            </div>
+            <div class="form-group full" style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px">
+              <button class="btn btn-ghost" onclick="toggleForm()">Cancel</button>
+              <button class="btn btn-primary" id="btn-create" onclick="createShipment()">Create Shipment</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">All Shipments</div>
+          <span id="record-count" style="font-size:12px;color:var(--rc-muted)"></span>
+        </div>
+        <div class="panel-body" style="padding:12px 0 0">
+          <div class="filter-bar">
+            <button class="filter-btn f-all" onclick="setFilter('all',this)">All</button>
+            <button class="filter-btn" onclick="setFilter('Pending',this)">Pending</button>
+            <button class="filter-btn" onclick="setFilter('In Transit',this)">In Transit</button>
+            <button class="filter-btn" onclick="setFilter('Delivered',this)">Delivered</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Shipment ID</th><th>Customer</th><th>Route</th><th>Status</th><th>Created</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="shipment-tbody">
+              <tr class="loading-row"><td colspan="6">Loading shipments…</td></tr>
+            </tbody>
+          </table>
+          <div id="empty-state" class="empty-state" style="display:none">No shipments found.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CUSTOMERS VIEW ══ -->
+    <div id="view-customers" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Customer Registry</div>
+          <div class="page-sub">Manage customer accounts and contacts</div>
+        </div>
+        <button class="btn btn-primary" onclick="toggleCustomerForm()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Customer
+        </button>
+      </div>
+
+      <div class="panel" id="add-customer-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title">New Customer</div>
+          <button class="btn btn-ghost" onclick="toggleCustomerForm()">Cancel</button>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input class="form-input" id="c-name" placeholder="Jane Smith" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input class="form-input" id="c-email" placeholder="jane@company.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone</label>
+              <input class="form-input" id="c-phone" placeholder="+1 (555) 000-0000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <input class="form-input" id="c-notes" placeholder="Optional notes…" />
+            </div>
+            <div class="form-group full" style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px">
+              <button class="btn btn-ghost" onclick="toggleCustomerForm()">Cancel</button>
+              <button class="btn btn-primary" id="btn-add-customer" onclick="createCustomer()">Add Customer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Customer List</div>
+          <span id="cust-count" style="font-size:12px;color:var(--rc-muted)"></span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <table>
+            <thead>
+              <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Notes</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="customer-tbody">
+              <tr class="loading-row"><td colspan="6">Loading customers…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS VIEW ══ -->
+    <div id="view-analytics" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Analytics</div>
+          <div class="page-sub">Shipment performance overview</div>
+        </div>
+        <button class="btn btn-ghost" onclick="loadShipments(); loadCustomers();">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+      <div class="stats-grid" id="analytics-stats"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">Status Distribution</div></div>
+          <div class="panel-body" id="analytics-dist"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">Top Routes</div></div>
+          <div class="panel-body" id="analytics-routes"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Edit modal -->
+<div class="modal-bg" id="edit-modal-bg" onclick="if(event.target===this)closeEdit()">
+  <div class="modal">
+    <h3>Edit Shipment</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Customer ID</label>
+        <input class="form-input" id="e-cid" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="e-status">
+          <option>Pending</option>
+          <option>In Transit</option>
+          <option>Delivered</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Origin</label>
+        <input class="form-input" id="e-origin" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Destination</label>
+        <input class="form-input" id="e-dest" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-edit" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-dot" id="toast-dot"></div>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:5000';
+
+  let shipments  = [];
+  let customers  = [];
+  let filterStatus = 'all';
+  let editId     = null;
+  let toastTimer = null;
+
+  // ─── API helpers ───────────────────────────────────────────────
+
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    return res.status === 204 ? null : res.json();
+  }
+
+  // ─── Health check ──────────────────────────────────────────────
+
+  async function checkHealth() {
+    try {
+      await apiFetch('/health');
+      document.getElementById('status-dot').classList.remove('offline');
+      document.getElementById('status-text').textContent = 'API Connected';
+    } catch {
+      document.getElementById('status-dot').classList.add('offline');
+      document.getElementById('status-text').textContent = 'API Offline';
+    }
+  }
+
+  // ─── Shipments ─────────────────────────────────────────────────
+
+  async function loadShipments() {
+    try {
+      shipments = await apiFetch('/shipments');
+      renderShipments();
+      updateStats();
+    } catch (e) {
+      showToast('Failed to load shipments: ' + e.message, '#f87171');
+    }
+  }
+
+  async function createShipment() {
+    const cid    = document.getElementById('f-cid').value.trim();
+    const origin = document.getElementById('f-origin').value.trim();
+    const dest   = document.getElementById('f-dest').value.trim();
+    const status = document.getElementById('f-status').value;
+    if (!cid || !origin || !dest) { showToast('Please fill in all fields', '#f59e0b'); return; }
+
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const newShipment = await apiFetch('/shipments', {
+        method: 'POST',
+        body: JSON.stringify({ customer_id: cid, origin, destination: dest, status }),
+      });
+      shipments.unshift(newShipment);
+      ['f-cid','f-origin','f-dest'].forEach(id => document.getElementById(id).value = '');
+      toggleForm();
+      renderShipments();
+      updateStats();
+      showToast('Shipment ' + newShipment.id + ' created', '#34d399');
+    } catch (e) {
+      showToast('Error: ' + e.message, '#f87171');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create Shipment';
+    }
+  }
+
+  async function deleteShipment(id) {
+    try {
+      await apiFetch('/shipments/' + id, { method: 'DELETE' });
+      shipments = shipments.filter(s => s.id !== id);
+      renderShipments();
+      updateStats();
+      showToast('Shipment ' + id + ' deleted', '#f87171');
+    } catch (e) {
+      showToast('Error: ' + e.message, '#f87171');
+    }
+  }
+
+  async function saveEdit() {
+    const btn = document.getElementById('btn-save-edit');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const updated = await apiFetch('/shipments/' + editId, {
+        method: 'PUT',
+        body: JSON.stringify({
+          customer_id: document.getElementById('e-cid').value.trim(),
+          origin:      document.getElementById('e-origin').value.trim(),
+          destination: document.getElementById('e-dest').value.trim(),
+          status:      document.getElementById('e-status').value,
+        }),
+      });
+      const idx = shipments.findIndex(s => s.id === editId);
+      if (idx !== -1) shipments[idx] = updated;
+      closeEdit();
+      renderShipments();
+      updateStats();
+      showToast('Shipment ' + editId + ' updated', '#60a5fa');
+    } catch (e) {
+      showToast('Error: ' + e.message, '#f87171');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Save Changes';
+    }
+  }
+
+  // ─── Customers ─────────────────────────────────────────────────
+
+  async function loadCustomers() {
+    try {
+      customers = await apiFetch('/customers');
+      renderCustomers();
+    } catch (e) {
+      showToast('Failed to load customers: ' + e.message, '#f87171');
+    }
+  }
+
+  async function createCustomer() {
+    const name  = document.getElementById('c-name').value.trim();
+    const email = document.getElementById('c-email').value.trim();
+    const phone = document.getElementById('c-phone').value.trim();
+    const notes = document.getElementById('c-notes').value.trim();
+    if (!name || !email) { showToast('Name and email are required', '#f59e0b'); return; }
+
+    const btn = document.getElementById('btn-add-customer');
+    btn.disabled = true; btn.textContent = 'Adding…';
+    try {
+      const newCust = await apiFetch('/customers', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, phone, notes }),
+      });
+      customers.push(newCust);
+      ['c-name','c-email','c-phone','c-notes'].forEach(id => document.getElementById(id).value = '');
+      toggleCustomerForm();
+      renderCustomers();
+      showToast('Customer ' + newCust.name + ' added', '#34d399');
+    } catch (e) {
+      showToast('Error: ' + e.message, '#f87171');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Add Customer';
+    }
+  }
+
+  async function deleteCustomer(id) {
+    try {
+      await apiFetch('/customers/' + id, { method: 'DELETE' });
+      customers = customers.filter(c => c.id !== id);
+      renderCustomers();
+      showToast('Customer removed', '#f87171');
+    } catch (e) {
+      showToast('Error: ' + e.message, '#f87171');
+    }
+  }
+
+  // ─── Render helpers ────────────────────────────────────────────
+
+  function badgeClass(s) {
+    if (s === 'Pending')   return 'badge badge-pending';
+    if (s === 'In Transit') return 'badge badge-transit';
+    return 'badge badge-delivered';
+  }
+
+  function renderShipments() {
+    const tbody = document.getElementById('shipment-tbody');
+    const empty = document.getElementById('empty-state');
+    const list  = filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
+    document.getElementById('record-count').textContent = list.length + ' record' + (list.length !== 1 ? 's' : '');
+
+    if (!list.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    tbody.innerHTML = list.map(s => `
+      <tr>
+        <td class="id-cell">${s.id}</td>
+        <td style="font-size:12px;color:var(--rc-muted)">${s.customer_id}</td>
+        <td><div class="route-cell">${s.origin} <span class="route-arrow">→</span> ${s.destination}</div></td>
+        <td><span class="${badgeClass(s.status)}">${s.status}</span></td>
+        <td class="id-cell">${s.created_at || '—'}</td>
+        <td><div class="actions">
+          <button class="btn btn-edit"   onclick="openEdit('${s.id}')">Edit</button>
+          <button class="btn btn-danger" onclick="deleteShipment('${s.id}')">Delete</button>
+        </div></td>
+      </tr>`).join('');
+  }
+
+  function updateStats() {
+    const total     = shipments.length;
+    const pending   = shipments.filter(s => s.status === 'Pending').length;
+    const transit   = shipments.filter(s => s.status === 'In Transit').length;
+    const delivered = shipments.filter(s => s.status === 'Delivered').length;
+    document.getElementById('s-total').textContent     = total;
+    document.getElementById('s-pending').textContent   = pending;
+    document.getElementById('s-transit').textContent   = transit;
+    document.getElementById('s-delivered').textContent = delivered;
+  }
+
+  function renderCustomers() {
+    const tbody = document.getElementById('customer-tbody');
+    document.getElementById('cust-count').textContent = customers.length + ' record' + (customers.length !== 1 ? 's' : '');
+    if (!customers.length) {
+      tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No customers yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = customers.map(c => `
+      <tr>
+        <td class="id-cell">${c.id}</td>
+        <td style="font-weight:500">${c.name}</td>
+        <td style="font-size:12px;color:var(--rc-muted)">${c.email}</td>
+        <td class="id-cell">${c.phone || '—'}</td>
+        <td style="font-size:12px;color:var(--rc-muted)">${c.notes || '—'}</td>
+        <td><button class="btn btn-danger" onclick="deleteCustomer('${c.id}')">Delete</button></td>
+      </tr>`).join('');
+  }
+
+  function renderAnalytics() {
+    const total     = shipments.length;
+    const pending   = shipments.filter(s => s.status === 'Pending').length;
+    const transit   = shipments.filter(s => s.status === 'In Transit').length;
+    const delivered = shipments.filter(s => s.status === 'Delivered').length;
+    const rate      = total ? Math.round((delivered / total) * 100) : 0;
+
+    document.getElementById('analytics-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Shipments</div><div class="stat-value">${total}</div><div class="stat-sub">All time</div></div>
+      <div class="stat-card"><div class="stat-label">Delivery Rate</div><div class="stat-value" style="color:var(--rc-delivered-text)">${rate}%</div><div class="stat-sub">Completed</div></div>
+      <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value" style="color:var(--rc-transit-text)">${customers.length}</div><div class="stat-sub">Registered</div></div>
+      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--rc-pending-text)">${pending + transit}</div><div class="stat-sub">In pipeline</div></div>`;
+
+    const maxCount = Math.max(pending, transit, delivered, 1);
+    const bar = (label, count, color) => `
+      <div class="bar-row">
+        <span class="bar-label">${label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round((count/maxCount)*100)}%;background:${color}"></div></div>
+        <span class="bar-count">${count}</span>
+      </div>`;
+    document.getElementById('analytics-dist').innerHTML =
+      bar('Pending',   pending,   'var(--rc-pending-text)') +
+      bar('In Transit', transit,  'var(--rc-transit-text)') +
+      bar('Delivered', delivered, 'var(--rc-delivered-text)');
+
+    const routeMap = {};
+    shipments.forEach(s => {
+      const k = s.origin.split(',')[0] + ' → ' + s.destination.split(',')[0];
+      routeMap[k] = (routeMap[k] || 0) + 1;
+    });
+    const top = Object.entries(routeMap).sort((a,b) => b[1]-a[1]).slice(0,5);
+    document.getElementById('analytics-routes').innerHTML = top.length
+      ? top.map(([route, count]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)">
+            <span style="font-size:13px">${route}</span>
+            <span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${count}</span>
+          </div>`).join('')
+      : '<div style="color:var(--rc-muted);font-size:13px">No data yet.</div>';
+  }
+
+  // ─── UI interactions ───────────────────────────────────────────
+
+  function setView(v) {
+    ['shipments','customers','analytics'].forEach(n => {
+      document.getElementById('view-' + n).style.display = n === v ? 'block' : 'none';
+      document.getElementById('nav-' + n).classList.toggle('active', n === v);
+    });
+    if (v === 'analytics') renderAnalytics();
+  }
+
+  function setFilter(f, btn) {
+    filterStatus = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.className = 'filter-btn');
+    const map = { all: 'f-all', Pending: 'f-pending', 'In Transit': 'f-transit', Delivered: 'f-delivered' };
+    btn.classList.add(map[f] || 'f-all');
+    renderShipments();
+  }
+
+  function toggleForm() {
+    const p = document.getElementById('add-form-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function toggleCustomerForm() {
+    const p = document.getElementById('add-customer-panel');
+    p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function openEdit(id) {
+    const s = shipments.find(x => x.id === id);
+    editId = id;
+    document.getElementById('e-cid').value    = s.customer_id;
+    document.getElementById('e-origin').value = s.origin;
+    document.getElementById('e-dest').value   = s.destination;
+    document.getElementById('e-status').value = s.status;
+    document.getElementById('edit-modal-bg').classList.add('open');
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-modal-bg').classList.remove('open');
+    editId = null;
+  }
+
+  function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    document.getElementById('toast-msg').textContent = msg;
+    document.getElementById('toast-dot').style.background = color;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ─── Boot ──────────────────────────────────────────────────────
+
+  checkHealth();
+  loadShipments();
+  loadCustomers();
+</script>
+</body>
+</html>
