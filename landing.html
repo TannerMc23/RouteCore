@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RouteCore — Logistics Tracking for Modern Shippers</title>
+<meta name="description" content="One dashboard to track, manage, and optimize shipments across every carrier. Built for freight brokers and shippers tired of spreadsheets." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080a0e;
+  --surface:  #0f1218;
+  --card:     #161b24;
+  --border:   #1e2636;
+  --border2:  #2a3347;
+  --text:     #dce3ef;
+  --muted:    #5a6580;
+  --accent:   #1e6fff;
+  --accent2:  #00c9a7;
+  --warn:     #f5a623;
+  --red:      #f04438;
+  --font-display: 'Barlow Condensed', sans-serif;
+  --font-body:    'Barlow', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ── Nav ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; height: 60px;
+  background: rgba(8,10,14,0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 800; letter-spacing: 1px;
+  text-decoration: none; color: var(--text);
+}
+.nav-logo-mark {
+  width: 30px; height: 30px;
+  background: var(--accent); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-logo-mark svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 2.5; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
+.nav-links a {
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  display: flex; align-items: center; gap: 12px;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 6px;
+  font-family: var(--font-body); font-size: 14px; font-weight: 600;
+  cursor: pointer; text-decoration: none; border: none; transition: all 0.15s;
+}
+.btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+.btn-ghost:hover { color: var(--text); border-color: var(--text); }
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: #1a5fe0; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(30,111,255,0.35); }
+.btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 8px; }
+.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Hero ── */
+.hero {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  overflow: hidden;
+}
+.hero-grid-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(30,111,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,111,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 80%);
+}
+.hero-glow {
+  position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse, rgba(30,111,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(30,111,255,0.1);
+  border: 1px solid rgba(30,111,255,0.25);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: #6ba3ff;
+  margin-bottom: 28px; position: relative; z-index: 1;
+}
+.hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #6ba3ff; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 8vw, 100px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  position: relative; z-index: 1;
+  margin-bottom: 10px;
+}
+.hero h1 .accent-word {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--accent);
+  display: block;
+}
+.hero h1 .solid-word { display: block; }
+
+.hero-sub {
+  font-size: clamp(16px, 2vw, 20px);
+  color: var(--muted); max-width: 560px;
+  margin: 24px auto 40px;
+  position: relative; z-index: 1;
+  line-height: 1.65;
+}
+.hero-sub strong { color: var(--text); font-weight: 600; }
+
+.hero-actions {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: center;
+  position: relative; z-index: 1;
+  margin-bottom: 64px;
+}
+.hero-proof {
+  display: flex; align-items: center; gap: 24px;
+  font-size: 13px; color: var(--muted);
+  position: relative; z-index: 1;
+  flex-wrap: wrap; justify-content: center;
+}
+.hero-proof-item { display: flex; align-items: center; gap: 7px; }
+.check { color: var(--accent2); font-size: 15px; }
+
+/* ── Dashboard preview ── */
+.dashboard-preview {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.preview-frame {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+}
+.preview-bar {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.preview-dot { width: 10px; height: 10px; border-radius: 50%; }
+.preview-url {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 4px 12px; font-size: 12px; color: var(--muted);
+  font-family: monospace; margin: 0 8px;
+}
+.preview-body { padding: 20px; display: grid; grid-template-columns: 180px 1fr; gap: 16px; min-height: 300px; }
+.preview-sidebar { display: flex; flex-direction: column; gap: 4px; }
+.preview-nav-item {
+  padding: 7px 10px; border-radius: 6px; font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px;
+}
+.preview-nav-item.active { background: rgba(30,111,255,0.12); color: #6ba3ff; }
+.preview-nav-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.preview-main { display: flex; flex-direction: column; gap: 12px; }
+.preview-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.preview-stat {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.preview-stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+.preview-stat-val { font-size: 20px; font-weight: 700; font-family: monospace; }
+.preview-table { background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.preview-thead { background: var(--surface); padding: 8px 12px; display: grid; grid-template-columns: 80px 70px 1fr 80px 70px; gap: 8px; }
+.preview-th { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.preview-row { padding: 8px 12px; display: grid; grid-template-columns: 80px 70px 1fr 80px 70px; gap: 8px; border-top: 1px solid var(--border); align-items: center; }
+.preview-cell { font-size: 11px; }
+.preview-id { color: var(--muted); font-family: monospace; }
+.preview-badge {
+  display: inline-block; padding: 2px 7px; border-radius: 10px;
+  font-size: 9px; font-weight: 700; border: 1px solid;
+}
+.pb-delivered { background: #0d2818; color: #34d399; border-color: #065f46; }
+.pb-transit   { background: #0d1f3c; color: #60a5fa; border-color: #1e40af; }
+.pb-pending   { background: #2d1f00; color: #f59e0b; border-color: #92400e; }
+.pb-delayed   { background: #2d0f0f; color: #f87171; border-color: #7f1d1d; }
+
+/* ── Section base ── */
+section { position: relative; z-index: 1; }
+.section-inner { max-width: 1100px; margin: 0 auto; padding: 100px 24px; }
+.section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 800; text-transform: uppercase;
+  line-height: 1; letter-spacing: -0.5px;
+  margin-bottom: 18px;
+}
+.section-sub { font-size: 17px; color: var(--muted); max-width: 520px; line-height: 1.65; }
+
+/* ── Problem section ── */
+.problem-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+.problem-list { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; }
+.problem-item {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 18px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.problem-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px;
+}
+.problem-icon.red { background: rgba(240,68,56,0.1); }
+.problem-icon.warn { background: rgba(245,166,35,0.1); }
+.problem-icon.muted { background: rgba(90,101,128,0.15); }
+.problem-item h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.problem-item p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+.solution-card {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 32px;
+  position: relative; overflow: hidden;
+}
+.solution-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.solution-metric {
+  display: flex; flex-direction: column;
+  padding: 16px 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.solution-metric:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.solution-metric-val {
+  font-family: var(--font-display);
+  font-size: 42px; font-weight: 800;
+  color: var(--accent2); line-height: 1;
+  margin-bottom: 4px;
+}
+.solution-metric-label { font-size: 13px; color: var(--muted); }
+
+/* ── Features ── */
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin-top: 60px; }
+.feature-card {
+  background: var(--card); padding: 32px;
+  transition: background 0.2s;
+  position: relative;
+}
+.feature-card:hover { background: #1d2433; }
+.feature-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: rgba(30,111,255,0.1); border: 1px solid rgba(30,111,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 20px;
+}
+.feature-icon svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.8; }
+.feature-card h3 { font-family: var(--font-display); font-size: 20px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+.feature-card p { font-size: 14px; color: var(--muted); line-height: 1.65; }
+.feature-tag {
+  display: inline-block; margin-top: 14px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  color: var(--accent2); background: rgba(0,201,167,0.08);
+  border: 1px solid rgba(0,201,167,0.2);
+  padding: 3px 9px; border-radius: 4px;
+}
+
+/* ── How it works ── */
+.how-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 60px; position: relative; }
+.steps::before {
+  content: '';
+  position: absolute; top: 28px; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border2), var(--border2), transparent);
+}
+.step { padding: 0 24px; text-align: center; }
+.step-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  font-family: var(--font-display); font-size: 22px; font-weight: 800;
+  color: var(--accent); position: relative; z-index: 1;
+}
+.step h4 { font-family: var(--font-display); font-size: 18px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+.step p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* ── Carriers ── */
+.carriers-section { text-align: center; }
+.carriers-grid {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; flex-wrap: wrap; margin-top: 40px;
+}
+.carrier-pill {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 20px;
+  font-size: 14px; font-weight: 600; color: var(--muted);
+  transition: all 0.15s;
+}
+.carrier-pill:hover { border-color: var(--border2); color: var(--text); }
+.carrier-pill.featured { border-color: var(--border2); color: var(--text); }
+
+/* ── Pricing ── */
+.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 56px; }
+.pricing-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 32px;
+  position: relative; transition: transform 0.2s;
+}
+.pricing-card:hover { transform: translateY(-4px); }
+.pricing-card.featured {
+  border-color: var(--accent);
+  box-shadow: 0 0 40px rgba(30,111,255,0.12);
+}
+.pricing-card.featured::before {
+  content: 'MOST POPULAR';
+  position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+  background: var(--accent); color: white;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+  padding: 4px 14px; border-radius: 0 0 8px 8px;
+}
+.pricing-tier { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.pricing-price {
+  font-family: var(--font-display);
+  font-size: 52px; font-weight: 800; line-height: 1;
+  margin-bottom: 4px;
+}
+.pricing-price span { font-size: 20px; color: var(--muted); font-weight: 500; vertical-align: top; margin-top: 10px; display: inline-block; }
+.pricing-period { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.pricing-divider { height: 1px; background: var(--border); margin: 20px 0; }
+.pricing-features { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+.pricing-features li { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.pricing-features li::before { content: '✓'; color: var(--accent2); font-weight: 700; flex-shrink: 0; }
+.pricing-features li.no::before { content: '×'; color: var(--muted); }
+.pricing-features li.no { opacity: 0.5; }
+
+/* ── Testimonials ── */
+.testimonials-section { background: var(--surface); border-top: 1px solid var(--border); }
+.testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 56px; }
+.testimonial {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px;
+}
+.testimonial-quote { font-size: 15px; line-height: 1.7; margin-bottom: 20px; color: var(--text); }
+.testimonial-quote::before { content: '"'; font-family: var(--font-display); font-size: 48px; color: var(--accent); line-height: 0; vertical-align: -18px; margin-right: 4px; }
+.testimonial-author { display: flex; align-items: center; gap: 12px; }
+.testimonial-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 16px; font-weight: 700; color: white;
+  flex-shrink: 0;
+}
+.testimonial-name { font-size: 14px; font-weight: 600; }
+.testimonial-role { font-size: 12px; color: var(--muted); }
+
+/* ── CTA ── */
+.cta-section {
+  text-align: center;
+  background: linear-gradient(180deg, var(--bg) 0%, #050810 100%);
+}
+.cta-box {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 20px; padding: 72px 40px;
+  position: relative; overflow: hidden;
+  max-width: 760px; margin: 0 auto;
+}
+.cta-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+}
+.cta-box h2 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 68px);
+  font-weight: 800; text-transform: uppercase;
+  line-height: 0.95; margin-bottom: 20px;
+}
+.cta-box p { font-size: 17px; color: var(--muted); margin-bottom: 36px; line-height: 1.6; }
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.cta-note { font-size: 13px; color: var(--muted); margin-top: 18px; }
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 20px;
+}
+.footer-logo { font-family: var(--font-display); font-size: 18px; font-weight: 800; letter-spacing: 1px; color: var(--muted); }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: var(--text); }
+.footer-copy { font-size: 13px; color: var(--muted); }
+
+/* ── Ticker ── */
+.ticker {
+  background: var(--accent); color: white;
+  padding: 8px 0; overflow: hidden;
+  font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.ticker-inner {
+  display: flex; gap: 0;
+  animation: ticker 30s linear infinite;
+  width: max-content;
+}
+.ticker-item { padding: 0 32px; white-space: nowrap; }
+.ticker-sep { opacity: 0.5; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ── Animations ── */
+.fade-up {
+  opacity: 0; transform: translateY(24px);
+  animation: fadeUp 0.6s ease forwards;
+}
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+.delay-5 { animation-delay: 0.5s; }
+
+/* ── Mobile ── */
+@media (max-width: 900px) {
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+  .hero h1 { font-size: clamp(44px, 10vw, 70px); }
+  .problem-grid { grid-template-columns: 1fr; gap: 32px; }
+  .features-grid { grid-template-columns: 1fr; gap: 2px; }
+  .steps { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .steps::before { display: none; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 56px auto 0; }
+  .testimonials-grid { grid-template-columns: 1fr; }
+  .preview-body { grid-template-columns: 1fr; }
+  .preview-sidebar { display: none; }
+  .preview-stats { grid-template-columns: 1fr 1fr; }
+  footer { flex-direction: column; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; }
+}
+@media (max-width: 560px) {
+  .section-inner { padding: 64px 20px; }
+  .steps { grid-template-columns: 1fr; }
+  .hero-actions { flex-direction: column; width: 100%; }
+  .hero-actions .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-mark">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    ROUTECORE
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <div class="nav-cta">
+    <a href="index.html" class="btn btn-ghost">Log In</a>
+    <a href="#pricing" class="btn btn-primary">Get Started</a>
+  </div>
+</nav>
+
+<!-- Ticker -->
+<div class="ticker" style="margin-top:60px">
+  <div class="ticker-inner">
+    <span class="ticker-item">FedEx <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">UPS <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">USPS <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">DHL <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">XPO Logistics <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Amazon Logistics <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">FreightQuote <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Real-time ETAs <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Delay Alerts <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Multi-carrier Tracking <span class="ticker-sep">·</span></span>
+    <!-- duplicate for seamless loop -->
+    <span class="ticker-item">FedEx <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">UPS <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">USPS <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">DHL <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">XPO Logistics <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Amazon Logistics <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">FreightQuote <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Real-time ETAs <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Delay Alerts <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Multi-carrier Tracking <span class="ticker-sep">·</span></span>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-eyebrow fade-up">Logistics CRM for Modern Shippers</div>
+
+  <h1 class="fade-up delay-1">
+    <span class="solid-word">Ship</span>
+    <span class="accent-word">Smarter.</span>
+    <span class="solid-word">Track</span>
+    <span class="solid-word">Everything.</span>
+  </h1>
+
+  <p class="hero-sub fade-up delay-2">
+    One dashboard to manage <strong>every shipment, every carrier, every customer</strong> — without the spreadsheets, without the chaos.
+  </p>
+
+  <div class="hero-actions fade-up delay-3">
+    <a href="#pricing" class="btn btn-primary btn-lg">
+      Start Free Trial
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+    <a href="index.html" class="btn btn-outline btn-lg">View Live Dashboard</a>
+  </div>
+
+  <div class="hero-proof fade-up delay-4">
+    <div class="hero-proof-item"><span class="check">✓</span> No credit card required</div>
+    <div class="hero-proof-item"><span class="check">✓</span> Setup in under 5 minutes</div>
+    <div class="hero-proof-item"><span class="check">✓</span> Cancel anytime</div>
+  </div>
+</section>
+
+<!-- Dashboard Preview -->
+<div class="dashboard-preview fade-up delay-5" style="padding-bottom:80px">
+  <div class="preview-frame">
+    <div class="preview-bar">
+      <div class="preview-dot" style="background:#f04438"></div>
+      <div class="preview-dot" style="background:#f5a623"></div>
+      <div class="preview-dot" style="background:#34d399"></div>
+      <div class="preview-url">app.routecore.io/dashboard</div>
+    </div>
+    <div class="preview-body">
+      <div class="preview-sidebar">
+        <div class="preview-nav-item active"><div class="preview-nav-dot"></div> Shipments</div>
+        <div class="preview-nav-item"><div class="preview-nav-dot"></div> Customers</div>
+        <div class="preview-nav-item"><div class="preview-nav-dot"></div> Analytics</div>
+      </div>
+      <div class="preview-main">
+        <div class="preview-stats">
+          <div class="preview-stat"><div class="preview-stat-label">Total</div><div class="preview-stat-val">248</div></div>
+          <div class="preview-stat"><div class="preview-stat-label">In Transit</div><div class="preview-stat-val" style="color:#60a5fa">84</div></div>
+          <div class="preview-stat"><div class="preview-stat-label">Delivered</div><div class="preview-stat-val" style="color:#34d399">147</div></div>
+          <div class="preview-stat"><div class="preview-stat-label">Delayed</div><div class="preview-stat-val" style="color:#f87171">17</div></div>
+        </div>
+        <div class="preview-table">
+          <div class="preview-thead">
+            <div class="preview-th">ID</div>
+            <div class="preview-th">Carrier</div>
+            <div class="preview-th">Route</div>
+            <div class="preview-th">ETA</div>
+            <div class="preview-th">Status</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell preview-id">SHP-0248</div>
+            <div class="preview-cell" style="font-size:11px;font-weight:600">FedEx</div>
+            <div class="preview-cell" style="font-size:11px">Chicago → Miami</div>
+            <div class="preview-cell preview-id">Apr 26</div>
+            <div class="preview-cell"><span class="preview-badge pb-transit">In Transit</span></div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell preview-id">SHP-0247</div>
+            <div class="preview-cell" style="font-size:11px;font-weight:600">UPS</div>
+            <div class="preview-cell" style="font-size:11px">NY → LA</div>
+            <div class="preview-cell preview-id">Apr 24</div>
+            <div class="preview-cell"><span class="preview-badge pb-delivered">Delivered</span></div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell preview-id">SHP-0246</div>
+            <div class="preview-cell" style="font-size:11px;font-weight:600">DHL</div>
+            <div class="preview-cell" style="font-size:11px">Seattle → Denver</div>
+            <div class="preview-cell preview-id">Apr 25</div>
+            <div class="preview-cell"><span class="preview-badge pb-delayed">Delayed</span></div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-cell preview-id">SHP-0245</div>
+            <div class="preview-cell" style="font-size:11px;font-weight:600">USPS</div>
+            <div class="preview-cell" style="font-size:11px">Dallas → Phoenix</div>
+            <div class="preview-cell preview-id">Apr 28</div>
+            <div class="preview-cell"><span class="preview-badge pb-pending">Pending</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Problem / Solution -->
+<section class="problem-section" id="features">
+  <div class="section-inner">
+    <div class="problem-grid">
+      <div>
+        <div class="section-label">The Problem</div>
+        <h2 class="section-title">Logistics Is Still Broken</h2>
+        <p class="section-sub">Most businesses are still managing shipments across five browser tabs, two spreadsheets, and a group chat.</p>
+        <div class="problem-list">
+          <div class="problem-item">
+            <div class="problem-icon red">⚠️</div>
+            <div>
+              <h4>No single source of truth</h4>
+              <p>Shipment data is scattered across carrier portals, emails, and spreadsheets. Nothing talks to each other.</p>
+            </div>
+          </div>
+          <div class="problem-item">
+            <div class="problem-icon warn">⏱</div>
+            <div>
+              <h4>Delays go unnoticed until it's too late</h4>
+              <p>By the time someone checks a tracking number, the customer is already calling to complain.</p>
+            </div>
+          </div>
+          <div class="problem-item">
+            <div class="problem-icon muted">📊</div>
+            <div>
+              <h4>Legacy software is slow and expensive</h4>
+              <p>Enterprise TMS platforms cost tens of thousands per year and take months to implement.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="solution-card">
+          <div class="section-label" style="margin-bottom:24px">RouteCore Fixes This</div>
+          <div class="solution-metric">
+            <div class="solution-metric-val">5 min</div>
+            <div class="solution-metric-label">Average setup time from signup to first shipment tracked</div>
+          </div>
+          <div class="solution-metric">
+            <div class="solution-metric-val">100%</div>
+            <div class="solution-metric-label">Shipment visibility across all your carriers in one place</div>
+          </div>
+          <div class="solution-metric">
+            <div class="solution-metric-val">10×</div>
+            <div class="solution-metric-label">Cheaper than enterprise TMS platforms with the same core features</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section>
+  <div class="section-inner">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything You Need.<br>Nothing You Don't.</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        </div>
+        <h3>Shipment Dashboard</h3>
+        <p>Every shipment in one table. Filter by carrier, status, customer or date. Find anything in seconds.</p>
+        <span class="feature-tag">Available Now</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <h3>Live Search</h3>
+        <p>Search by tracking number, carrier, origin, destination, or customer ID. Results update as you type.</p>
+        <span class="feature-tag">Available Now</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <h3>Delay Alerts</h3>
+        <p>Get notified the moment a shipment is delayed. Email and SMS alerts keep your team one step ahead.</p>
+        <span class="feature-tag">Coming Soon</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>
+        </div>
+        <h3>Customer Registry</h3>
+        <p>Manage all your customers alongside their shipment history. One place for contacts and context.</p>
+        <span class="feature-tag">Available Now</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Analytics</h3>
+        <p>Delivery rates, carrier performance, top routes, delay percentages. Know your operation at a glance.</p>
+        <span class="feature-tag">Available Now</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>Customer Portal</h3>
+        <p>Give customers a branded tracking page so they can self-serve instead of calling you for updates.</p>
+        <span class="feature-tag">Coming Soon</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section class="how-section" id="how">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">Up and Running in Minutes</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h4>Create Account</h4>
+        <p>Sign up in under 60 seconds. No demo calls, no sales process.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h4>Add Customers</h4>
+        <p>Import your customer list or add them one by one. Takes two minutes.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h4>Track Shipments</h4>
+        <p>Create shipments with carrier and tracking numbers. See status in real time.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h4>Get Alerts</h4>
+        <p>Set up delay and delivery alerts. Never miss an update again.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Carriers -->
+<section class="carriers-section">
+  <div class="section-inner">
+    <div class="section-label" style="text-align:center">Carrier Support</div>
+    <h2 class="section-title" style="text-align:center">Works With Every Carrier</h2>
+    <div class="carriers-grid">
+      <div class="carrier-pill featured">FedEx</div>
+      <div class="carrier-pill featured">UPS</div>
+      <div class="carrier-pill featured">USPS</div>
+      <div class="carrier-pill featured">DHL</div>
+      <div class="carrier-pill">Amazon Logistics</div>
+      <div class="carrier-pill">XPO Logistics</div>
+      <div class="carrier-pill">FreightQuote</div>
+      <div class="carrier-pill">Old Dominion</div>
+      <div class="carrier-pill">Estes Express</div>
+      <div class="carrier-pill">+ More Coming</div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing -->
+<section id="pricing" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, Transparent Pricing</h2>
+      <p class="section-sub" style="margin:0 auto 0">No setup fees. No contracts. Cancel anytime.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-tier">Starter</div>
+        <div class="pricing-price"><span>$</span>99</div>
+        <div class="pricing-period">per month</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Up to 500 shipments/mo</li>
+          <li>3 team members</li>
+          <li>All carrier tracking</li>
+          <li>Email alerts</li>
+          <li>Basic analytics</li>
+          <li class="no">SMS alerts</li>
+          <li class="no">Customer portal</li>
+          <li class="no">API access</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%;justify-content:center">Get Started</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="pricing-tier">Growth</div>
+        <div class="pricing-price"><span>$</span>299</div>
+        <div class="pricing-period">per month</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Up to 2,500 shipments/mo</li>
+          <li>10 team members</li>
+          <li>All carrier tracking</li>
+          <li>Email + SMS alerts</li>
+          <li>Advanced analytics</li>
+          <li>Customer portal</li>
+          <li>Priority support</li>
+          <li class="no">API access</li>
+        </ul>
+        <a href="#" class="btn btn-primary" style="width:100%;justify-content:center">Get Started</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-tier">Pro</div>
+        <div class="pricing-price"><span>$</span>999</div>
+        <div class="pricing-period">per month</div>
+        <div class="pricing-divider"></div>
+        <ul class="pricing-features">
+          <li>Unlimited shipments</li>
+          <li>Unlimited team members</li>
+          <li>All carrier tracking</li>
+          <li>Email + SMS alerts</li>
+          <li>Advanced analytics</li>
+          <li>Customer portal</li>
+          <li>API access</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%;justify-content:center">Get Started</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Testimonials -->
+<section class="testimonials-section">
+  <div class="section-inner">
+    <div style="text-align:center">
+      <div class="section-label">Early Users</div>
+      <h2 class="section-title">Built for People Like You</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial">
+        <div class="testimonial-quote">We went from managing 12 carrier portals to one dashboard. Our dispatchers save at least two hours a day.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">MR</div>
+          <div>
+            <div class="testimonial-name">Marcus R.</div>
+            <div class="testimonial-role">Operations Manager, Freight Broker</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-quote">The delay alerts alone are worth it. We used to find out about problems from angry customers. Not anymore.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">SL</div>
+          <div>
+            <div class="testimonial-name">Sarah L.</div>
+            <div class="testimonial-role">Logistics Director, Distributor</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial">
+        <div class="testimonial-quote">Finally something that doesn't cost $50k and take six months to set up. We were live in a day.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">DK</div>
+          <div>
+            <div class="testimonial-name">Derek K.</div>
+            <div class="testimonial-role">Owner, Small Trucking Company</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="contact">
+  <div class="section-inner">
+    <div class="cta-box">
+      <h2>Ready to Stop<br>Chasing Shipments?</h2>
+      <p>Join freight brokers and shippers who've replaced their spreadsheets with RouteCore.</p>
+      <div class="cta-actions">
+        <a href="#pricing" class="btn btn-primary btn-lg">Start Free Trial</a>
+        <a href="index.html" class="btn btn-outline btn-lg">See the Dashboard</a>
+      </div>
+      <div class="cta-note">No credit card required · Free 14-day trial · Setup in 5 minutes</div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">ROUTECORE</div>
+  <div class="footer-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#how">How It Works</a>
+    <a href="index.html">Dashboard</a>
+    <a href="mailto:tannermcmillan23@gmail.com">Contact</a>
+  </div>
+  <div class="footer-copy">© 2026 RouteCore. All rights reserved.</div>
+</footer>
+
+</body>
+</html>
