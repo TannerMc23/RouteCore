@@ -9,16 +9,13 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --rc-bg: #0a0c10;
-    --rc-surface: #12151c;
-    --rc-card: #1a1e28;
-    --rc-border: #252a38;
-    --rc-text: #e8eaf0;
-    --rc-muted: #6b7280;
-    --rc-accent: #3b82f6;
-    --rc-pending-bg: #2d1f00; --rc-pending-text: #f59e0b; --rc-pending-border: #92400e;
-    --rc-transit-bg: #0d1f3c; --rc-transit-text: #60a5fa; --rc-transit-border: #1e40af;
+    --rc-bg: #0a0c10; --rc-surface: #12151c; --rc-card: #1a1e28; --rc-border: #252a38;
+    --rc-text: #e8eaf0; --rc-muted: #6b7280; --rc-accent: #3b82f6;
+    --rc-pending-bg: #2d1f00;   --rc-pending-text: #f59e0b;  --rc-pending-border: #92400e;
+    --rc-transit-bg: #0d1f3c;   --rc-transit-text: #60a5fa;  --rc-transit-border: #1e40af;
     --rc-delivered-bg: #0d2818; --rc-delivered-text: #34d399; --rc-delivered-border: #065f46;
+    --rc-delayed-bg: #2d0f0f;   --rc-delayed-text: #f87171;  --rc-delayed-border: #7f1d1d;
+    --rc-cancelled-bg: #1a1a1a; --rc-cancelled-text: #9ca3af; --rc-cancelled-border: #374151;
   }
   body { background: var(--rc-bg); color: var(--rc-text); font-family: 'Syne', sans-serif; min-height: 100vh; }
 
@@ -48,17 +45,24 @@
   .page-sub { font-size: 13px; color: var(--rc-muted); margin-top: 3px; }
 
   /* ── Stats ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px; }
   .stat-card { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 10px; padding: 16px; }
   .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--rc-muted); text-transform: uppercase; margin-bottom: 8px; }
-  .stat-value { font-size: 28px; font-weight: 700; letter-spacing: -1px; font-family: 'IBM Plex Mono', monospace; }
+  .stat-value { font-size: 26px; font-weight: 700; letter-spacing: -1px; font-family: 'IBM Plex Mono', monospace; }
   .stat-sub { font-size: 12px; color: var(--rc-muted); margin-top: 4px; }
 
   /* ── Panels ── */
   .panel { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 12px; margin-bottom: 20px; }
-  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--rc-border); display: flex; align-items: center; justify-content: space-between; }
+  .panel-header { padding: 16px 20px; border-bottom: 1px solid var(--rc-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
   .panel-title { font-size: 14px; font-weight: 700; }
   .panel-body { padding: 20px; }
+
+  /* ── Search bar ── */
+  .search-wrap { position: relative; flex: 1; max-width: 320px; }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; stroke: var(--rc-muted); fill: none; stroke-width: 2; pointer-events: none; }
+  .search-input { width: 100%; background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 7px; padding: 8px 12px 8px 32px; font-size: 13px; color: var(--rc-text); font-family: 'Syne', sans-serif; outline: none; transition: border-color 0.15s; }
+  .search-input:focus { border-color: var(--rc-accent); }
+  .search-input::placeholder { color: var(--rc-muted); }
 
   /* ── Buttons ── */
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'Syne', sans-serif; }
@@ -77,39 +81,46 @@
   .form-group { display: flex; flex-direction: column; gap: 6px; }
   .form-group.full { grid-column: 1 / -1; }
   .form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--rc-muted); }
-  .form-input, .form-select { background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 7px; padding: 9px 12px; font-size: 13px; color: var(--rc-text); font-family: 'Syne', sans-serif; width: 100%; outline: none; transition: border-color 0.15s; }
-  .form-input:focus, .form-select:focus { border-color: var(--rc-accent); }
+  .form-input, .form-select, .form-textarea { background: var(--rc-surface); border: 1px solid var(--rc-border); border-radius: 7px; padding: 9px 12px; font-size: 13px; color: var(--rc-text); font-family: 'Syne', sans-serif; width: 100%; outline: none; transition: border-color 0.15s; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--rc-accent); }
   .form-select option { background: var(--rc-surface); }
+  .form-textarea { resize: vertical; min-height: 72px; }
 
   /* ── Table ── */
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th { text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--rc-muted); border-bottom: 1px solid var(--rc-border); }
+  thead th { text-align: left; padding: 10px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--rc-muted); border-bottom: 1px solid var(--rc-border); white-space: nowrap; }
   tbody tr { border-bottom: 1px solid rgba(37,42,56,0.6); transition: background 0.12s; }
   tbody tr:hover { background: rgba(255,255,255,0.02); }
   tbody tr:last-child { border-bottom: none; }
-  td { padding: 12px 14px; vertical-align: middle; }
+  td { padding: 11px 14px; vertical-align: middle; }
   .id-cell { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--rc-muted); }
-  .route-cell { display: flex; align-items: center; gap: 6px; font-weight: 500; }
-  .route-arrow { color: var(--rc-muted); font-size: 11px; }
+  .route-cell { display: flex; align-items: center; gap: 5px; font-weight: 500; font-size: 12px; }
+  .route-arrow { color: var(--rc-muted); }
+  .carrier-cell { font-size: 12px; font-weight: 600; }
+  .tracking-cell { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--rc-muted); }
+  .eta-cell { font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
   .actions { display: flex; gap: 6px; }
 
   /* ── Badges ── */
-  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; border: 1px solid; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; border: 1px solid; white-space: nowrap; }
   .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
   .badge-pending   { background: var(--rc-pending-bg);   color: var(--rc-pending-text);   border-color: var(--rc-pending-border); }
   .badge-transit   { background: var(--rc-transit-bg);   color: var(--rc-transit-text);   border-color: var(--rc-transit-border); }
   .badge-delivered { background: var(--rc-delivered-bg); color: var(--rc-delivered-text); border-color: var(--rc-delivered-border); }
+  .badge-delayed   { background: var(--rc-delayed-bg);   color: var(--rc-delayed-text);   border-color: var(--rc-delayed-border); }
+  .badge-cancelled { background: var(--rc-cancelled-bg); color: var(--rc-cancelled-text); border-color: var(--rc-cancelled-border); }
 
   /* ── Filter bar ── */
-  .filter-bar { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 4px; }
+  .filter-bar { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 4px; flex-wrap: wrap; }
   .filter-btn { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--rc-border); background: transparent; color: var(--rc-muted); cursor: pointer; transition: all 0.15s; font-family: 'Syne', sans-serif; }
   .filter-btn:hover { color: var(--rc-text); border-color: #4b5563; }
   .filter-btn.f-all       { background: rgba(255,255,255,0.07); color: var(--rc-text); border-color: #4b5563; }
   .filter-btn.f-pending   { background: var(--rc-pending-bg);   color: var(--rc-pending-text);   border-color: var(--rc-pending-border); }
   .filter-btn.f-transit   { background: var(--rc-transit-bg);   color: var(--rc-transit-text);   border-color: var(--rc-transit-border); }
   .filter-btn.f-delivered { background: var(--rc-delivered-bg); color: var(--rc-delivered-text); border-color: var(--rc-delivered-border); }
+  .filter-btn.f-delayed   { background: var(--rc-delayed-bg);   color: var(--rc-delayed-text);   border-color: var(--rc-delayed-border); }
 
-  /* ── Empty / Loading states ── */
+  /* ── Empty / Loading ── */
   .empty-state { text-align: center; padding: 48px; color: var(--rc-muted); font-size: 13px; }
   .loading-row td { color: var(--rc-muted); font-style: italic; text-align: center; padding: 32px; }
 
@@ -118,77 +129,46 @@
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-  /* ── Edit modal ── */
-  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 100; align-items: center; justify-content: center; }
+  /* ── Modal ── */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.72); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
   .modal-bg.open { display: flex; }
-  .modal { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 14px; padding: 24px; width: 440px; max-width: 92vw; }
+  .modal { background: var(--rc-card); border: 1px solid var(--rc-border); border-radius: 14px; padding: 24px; width: 520px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
   .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
 
-  /* ── Analytics bars ── */
+  /* ── Analytics ── */
   .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  .bar-label { font-size: 12px; color: var(--rc-muted); width: 76px; flex-shrink: 0; }
+  .bar-label { font-size: 12px; color: var(--rc-muted); width: 80px; flex-shrink: 0; }
   .bar-track { flex: 1; background: var(--rc-surface); border-radius: 4px; height: 8px; overflow: hidden; }
   .bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-  .bar-count { font-size: 13px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; min-width: 20px; text-align: right; }
+  .bar-count { font-size: 13px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; min-width: 24px; text-align: right; }
 
-  /* Mobile */
+  /* ── Mobile ── */
   @media (max-width: 768px) {
-  .main { grid-template-columns: 1fr; }
-
-  .sidebar {
-    position: static;
-    height: auto;
-    display: flex;
-    flex-wrap: wrap;
-    padding: 10px;
-    gap: 6px;
-    border-right: none;
-    border-bottom: 1px solid var(--rc-border);
+    .main { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; display: flex; flex-wrap: wrap; padding: 10px; gap: 6px; border-right: none; border-bottom: 1px solid var(--rc-border); }
+    .sidebar-section { margin-bottom: 0; }
+    .sidebar-label { display: none; }
+    .nav-item { padding: 7px 12px; font-size: 12px; margin: 0; }
+    .content { padding: 16px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-value { font-size: 20px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .panel-header { flex-direction: column; align-items: flex-start; }
+    .search-wrap { max-width: 100%; }
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    .page-header { flex-direction: column; gap: 12px; }
+    .page-header .btn { width: 100%; justify-content: center; }
+    .modal { width: 95vw; padding: 18px; }
+    div[style*="grid-template-columns:1fr 1fr"] { display: block !important; }
   }
-
-  .sidebar-section { margin-bottom: 0; }
-  .sidebar-label { display: none; }
-
-  .nav-item {
-    padding: 7px 12px;
-    font-size: 12px;
-    margin: 0;
+  @media (max-width: 420px) {
+    .stats-grid { grid-template-columns: 1fr; }
   }
-
-  .content { padding: 16px; }
-
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-
-  .stat-value { font-size: 22px; }
-
-  .form-grid { grid-template-columns: 1fr; }
-
-  .panel-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-
-  table { display: block; overflow-x: auto; white-space: nowrap; }
-
-  #analytics-stats { grid-template-columns: 1fr 1fr; }
-
-  div[style*="grid-template-columns:1fr 1fr"] {
-    display: block !important;
-  }
-
-  .page-header { flex-direction: column; gap: 12px; }
-  .page-header .btn { width: 100%; justify-content: center; }
-
-  .modal { width: 95vw; padding: 18px; }
-}
-
-@media (max-width: 420px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  #analytics-stats { grid-template-columns: 1fr; }
-}
 </style>
 </head>
 <body>
 
-<!-- ── Topbar ── -->
 <div class="topbar">
   <div class="logo">
     <div class="logo-icon">
@@ -197,15 +177,12 @@
     RouteCore
   </div>
   <div class="topbar-right">
-    <span id="api-status"><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting…</span></span>
-    <span>v1.0.0</span>
+    <span><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting…</span></span>
+    <span>v1.1.0</span>
   </div>
 </div>
 
-<!-- ── Main layout ── -->
 <div class="main">
-
-  <!-- Sidebar -->
   <div class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-label">Operations</div>
@@ -231,10 +208,9 @@
     </div>
   </div>
 
-  <!-- Content area -->
   <div class="content">
 
-    <!-- ══ SHIPMENTS VIEW ══ -->
+    <!-- ══ SHIPMENTS ══ -->
     <div id="view-shipments">
       <div class="page-header">
         <div>
@@ -247,11 +223,13 @@
         </button>
       </div>
 
-      <div class="stats-grid" id="stats-grid">
+      <!-- Stats -->
+      <div class="stats-grid">
         <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="s-total">—</div><div class="stat-sub">All shipments</div></div>
         <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="s-pending" style="color:var(--rc-pending-text)">—</div><div class="stat-sub">Awaiting pickup</div></div>
         <div class="stat-card"><div class="stat-label">In Transit</div><div class="stat-value" id="s-transit" style="color:var(--rc-transit-text)">—</div><div class="stat-sub">En route</div></div>
         <div class="stat-card"><div class="stat-label">Delivered</div><div class="stat-value" id="s-delivered" style="color:var(--rc-delivered-text)">—</div><div class="stat-sub">Completed</div></div>
+        <div class="stat-card"><div class="stat-label">Delayed</div><div class="stat-value" id="s-delayed" style="color:var(--rc-delayed-text)">—</div><div class="stat-sub">Needs attention</div></div>
       </div>
 
       <!-- Add form -->
@@ -272,6 +250,8 @@
                 <option value="Pending">Pending</option>
                 <option value="In Transit">In Transit</option>
                 <option value="Delivered">Delivered</option>
+                <option value="Delayed">Delayed</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
             <div class="form-group">
@@ -282,6 +262,32 @@
               <label class="form-label">Destination</label>
               <input class="form-input" id="f-dest" placeholder="City, Country" />
             </div>
+            <div class="form-group">
+              <label class="form-label">Carrier</label>
+              <select class="form-select" id="f-carrier">
+                <option value="">— Select carrier —</option>
+                <option>FedEx</option>
+                <option>UPS</option>
+                <option>USPS</option>
+                <option>DHL</option>
+                <option>Amazon Logistics</option>
+                <option>FreightQuote</option>
+                <option>XPO Logistics</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tracking Number</label>
+              <input class="form-input" id="f-tracking" placeholder="e.g. 1Z999AA10123456784" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">ETA</label>
+              <input class="form-input" id="f-eta" type="date" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <input class="form-input" id="f-notes" placeholder="Optional notes…" />
+            </div>
             <div class="form-group full" style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px">
               <button class="btn btn-ghost" onclick="toggleForm()">Cancel</button>
               <button class="btn btn-primary" id="btn-create" onclick="createShipment()">Create Shipment</button>
@@ -290,11 +296,17 @@
         </div>
       </div>
 
-      <!-- Table -->
+      <!-- Table panel -->
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">All Shipments</div>
-          <span id="record-count" style="font-size:12px;color:var(--rc-muted)"></span>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-input" id="search-input" placeholder="Search shipments…" oninput="onSearch(this.value)" />
+            </div>
+            <span id="record-count" style="font-size:12px;color:var(--rc-muted);white-space:nowrap"></span>
+          </div>
         </div>
         <div class="panel-body" style="padding:12px 0 0">
           <div class="filter-bar">
@@ -302,15 +314,23 @@
             <button class="filter-btn" onclick="setFilter('Pending',this)">Pending</button>
             <button class="filter-btn" onclick="setFilter('In Transit',this)">In Transit</button>
             <button class="filter-btn" onclick="setFilter('Delivered',this)">Delivered</button>
+            <button class="filter-btn" onclick="setFilter('Delayed',this)">Delayed</button>
           </div>
           <table>
             <thead>
               <tr>
-                <th>Shipment ID</th><th>Customer</th><th>Route</th><th>Status</th><th>Created</th><th>Actions</th>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Route</th>
+                <th>Carrier</th>
+                <th>Tracking #</th>
+                <th>ETA</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="shipment-tbody">
-              <tr class="loading-row"><td colspan="6">Loading shipments…</td></tr>
+              <tr class="loading-row"><td colspan="8">Loading shipments…</td></tr>
             </tbody>
           </table>
           <div id="empty-state" class="empty-state" style="display:none">No shipments found.</div>
@@ -318,7 +338,7 @@
       </div>
     </div>
 
-    <!-- ══ CUSTOMERS VIEW ══ -->
+    <!-- ══ CUSTOMERS ══ -->
     <div id="view-customers" style="display:none">
       <div class="page-header">
         <div>
@@ -330,7 +350,6 @@
           Add Customer
         </button>
       </div>
-
       <div class="panel" id="add-customer-panel" style="display:none">
         <div class="panel-header">
           <div class="panel-title">New Customer</div>
@@ -338,22 +357,10 @@
         </div>
         <div class="panel-body">
           <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label">Full Name</label>
-              <input class="form-input" id="c-name" placeholder="Jane Smith" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Email</label>
-              <input class="form-input" id="c-email" placeholder="jane@company.com" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Phone</label>
-              <input class="form-input" id="c-phone" placeholder="+1 (555) 000-0000" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Notes</label>
-              <input class="form-input" id="c-notes" placeholder="Optional notes…" />
-            </div>
+            <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="c-name" placeholder="Jane Smith" /></div>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="c-email" placeholder="jane@company.com" /></div>
+            <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="c-phone" placeholder="+1 (555) 000-0000" /></div>
+            <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="c-notes" placeholder="Optional notes…" /></div>
             <div class="form-group full" style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px">
               <button class="btn btn-ghost" onclick="toggleCustomerForm()">Cancel</button>
               <button class="btn btn-primary" id="btn-add-customer" onclick="createCustomer()">Add Customer</button>
@@ -361,7 +368,6 @@
           </div>
         </div>
       </div>
-
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">Customer List</div>
@@ -369,70 +375,61 @@
         </div>
         <div class="panel-body" style="padding:0">
           <table>
-            <thead>
-              <tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Notes</th><th>Actions</th></tr>
-            </thead>
-            <tbody id="customer-tbody">
-              <tr class="loading-row"><td colspan="6">Loading customers…</td></tr>
-            </tbody>
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody id="customer-tbody"><tr class="loading-row"><td colspan="6">Loading customers…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ══ ANALYTICS VIEW ══ -->
+    <!-- ══ ANALYTICS ══ -->
     <div id="view-analytics" style="display:none">
       <div class="page-header">
-        <div>
-          <div class="page-title">Analytics</div>
-          <div class="page-sub">Shipment performance overview</div>
-        </div>
-        <button class="btn btn-ghost" onclick="loadShipments(); loadCustomers();">
+        <div><div class="page-title">Analytics</div><div class="page-sub">Shipment performance overview</div></div>
+        <button class="btn btn-ghost" onclick="loadShipments();loadCustomers();">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
       </div>
-      <div class="stats-grid" id="analytics-stats"></div>
+      <div class="stats-grid" id="analytics-stats" style="grid-template-columns:repeat(4,1fr)"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title">Status Distribution</div></div>
-          <div class="panel-body" id="analytics-dist"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><div class="panel-title">Top Routes</div></div>
-          <div class="panel-body" id="analytics-routes"></div>
-        </div>
+        <div class="panel"><div class="panel-header"><div class="panel-title">Status Distribution</div></div><div class="panel-body" id="analytics-dist"></div></div>
+        <div class="panel"><div class="panel-header"><div class="panel-title">Top Carriers</div></div><div class="panel-body" id="analytics-carriers"></div></div>
+      </div>
+      <div class="panel" style="margin-top:0">
+        <div class="panel-header"><div class="panel-title">Top Routes</div></div>
+        <div class="panel-body" id="analytics-routes"></div>
       </div>
     </div>
 
-  </div><!-- /content -->
-</div><!-- /main -->
+  </div>
+</div>
 
 <!-- Edit modal -->
 <div class="modal-bg" id="edit-modal-bg" onclick="if(event.target===this)closeEdit()">
   <div class="modal">
     <h3>Edit Shipment</h3>
     <div class="form-grid">
-      <div class="form-group">
-        <label class="form-label">Customer ID</label>
-        <input class="form-input" id="e-cid" />
-      </div>
+      <div class="form-group"><label class="form-label">Customer ID</label><input class="form-input" id="e-cid" /></div>
       <div class="form-group">
         <label class="form-label">Status</label>
         <select class="form-select" id="e-status">
-          <option>Pending</option>
-          <option>In Transit</option>
-          <option>Delivered</option>
+          <option>Pending</option><option>In Transit</option><option>Delivered</option><option>Delayed</option><option>Cancelled</option>
         </select>
       </div>
+      <div class="form-group"><label class="form-label">Origin</label><input class="form-input" id="e-origin" /></div>
+      <div class="form-group"><label class="form-label">Destination</label><input class="form-input" id="e-dest" /></div>
       <div class="form-group">
-        <label class="form-label">Origin</label>
-        <input class="form-input" id="e-origin" />
+        <label class="form-label">Carrier</label>
+        <select class="form-select" id="e-carrier">
+          <option value="">— Select carrier —</option>
+          <option>FedEx</option><option>UPS</option><option>USPS</option><option>DHL</option>
+          <option>Amazon Logistics</option><option>FreightQuote</option><option>XPO Logistics</option><option>Other</option>
+        </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Destination</label>
-        <input class="form-input" id="e-dest" />
-      </div>
+      <div class="form-group"><label class="form-label">Tracking Number</label><input class="form-input" id="e-tracking" /></div>
+      <div class="form-group"><label class="form-label">ETA</label><input class="form-input" id="e-eta" type="date" /></div>
+      <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="e-notes" placeholder="Optional notes…" /></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeEdit()">Cancel</button>
@@ -441,23 +438,20 @@
   </div>
 </div>
 
-<!-- Toast -->
-<div class="toast" id="toast">
-  <div class="toast-dot" id="toast-dot"></div>
-  <span id="toast-msg"></span>
-</div>
+<div class="toast" id="toast"><div class="toast-dot" id="toast-dot"></div><span id="toast-msg"></span></div>
 
 <script>
-  const API = 'https://routecore.onrender.com';
+  const API = 'http://127.0.0.1:5000'; // ← change to your Render URL when deploying
 
-  let shipments  = [];
-  let customers  = [];
+  let shipments    = [];
+  let customers    = [];
   let filterStatus = 'all';
-  let editId     = null;
-  let toastTimer = null;
+  let searchQuery  = '';
+  let editId       = null;
+  let searchTimer  = null;
+  let toastTimer   = null;
 
-  // ─── API helpers ───────────────────────────────────────────────
-
+  // ── API helper ──────────────────────────────────────────────────
   async function apiFetch(path, options = {}) {
     const res = await fetch(API + path, {
       headers: { 'Content-Type': 'application/json' },
@@ -470,8 +464,7 @@
     return res.status === 204 ? null : res.json();
   }
 
-  // ─── Health check ──────────────────────────────────────────────
-
+  // ── Health ──────────────────────────────────────────────────────
   async function checkHealth() {
     try {
       await apiFetch('/health');
@@ -483,55 +476,52 @@
     }
   }
 
-  // ─── Shipments ─────────────────────────────────────────────────
-
+  // ── Shipments ───────────────────────────────────────────────────
   async function loadShipments() {
     try {
       shipments = await apiFetch('/shipments');
       renderShipments();
       updateStats();
-    } catch (e) {
-      showToast('Failed to load shipments: ' + e.message, '#f87171');
-    }
+    } catch (e) { showToast('Failed to load shipments: ' + e.message, '#f87171'); }
   }
 
   async function createShipment() {
-    const cid    = document.getElementById('f-cid').value.trim();
-    const origin = document.getElementById('f-origin').value.trim();
-    const dest   = document.getElementById('f-dest').value.trim();
-    const status = document.getElementById('f-status').value;
-    if (!cid || !origin || !dest) { showToast('Please fill in all fields', '#f59e0b'); return; }
+    const cid      = document.getElementById('f-cid').value.trim();
+    const origin   = document.getElementById('f-origin').value.trim();
+    const dest     = document.getElementById('f-dest').value.trim();
+    const status   = document.getElementById('f-status').value;
+    const carrier  = document.getElementById('f-carrier').value;
+    const tracking = document.getElementById('f-tracking').value.trim();
+    const eta      = document.getElementById('f-eta').value;
+    const notes    = document.getElementById('f-notes').value.trim();
+
+    if (!cid || !origin || !dest) { showToast('Customer ID, origin and destination are required', '#f59e0b'); return; }
 
     const btn = document.getElementById('btn-create');
     btn.disabled = true; btn.textContent = 'Creating…';
     try {
-      const newShipment = await apiFetch('/shipments', {
+      const s = await apiFetch('/shipments', {
         method: 'POST',
-        body: JSON.stringify({ customer_id: cid, origin, destination: dest, status }),
+        body: JSON.stringify({ customer_id: cid, origin, destination: dest, status, carrier, tracking_number: tracking, eta, notes }),
       });
-      shipments.unshift(newShipment);
-      ['f-cid','f-origin','f-dest'].forEach(id => document.getElementById(id).value = '');
+      shipments.unshift(s);
+      ['f-cid','f-origin','f-dest','f-tracking','f-notes'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-eta').value = '';
       toggleForm();
       renderShipments();
       updateStats();
-      showToast('Shipment ' + newShipment.id + ' created', '#34d399');
-    } catch (e) {
-      showToast('Error: ' + e.message, '#f87171');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Create Shipment';
-    }
+      showToast('Shipment ' + s.id + ' created', '#34d399');
+    } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    finally { btn.disabled = false; btn.textContent = 'Create Shipment'; }
   }
 
   async function deleteShipment(id) {
     try {
       await apiFetch('/shipments/' + id, { method: 'DELETE' });
       shipments = shipments.filter(s => s.id !== id);
-      renderShipments();
-      updateStats();
+      renderShipments(); updateStats();
       showToast('Shipment ' + id + ' deleted', '#f87171');
-    } catch (e) {
-      showToast('Error: ' + e.message, '#f87171');
-    }
+    } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
   }
 
   async function saveEdit() {
@@ -541,60 +531,65 @@
       const updated = await apiFetch('/shipments/' + editId, {
         method: 'PUT',
         body: JSON.stringify({
-          customer_id: document.getElementById('e-cid').value.trim(),
-          origin:      document.getElementById('e-origin').value.trim(),
-          destination: document.getElementById('e-dest').value.trim(),
-          status:      document.getElementById('e-status').value,
+          customer_id:     document.getElementById('e-cid').value.trim(),
+          origin:          document.getElementById('e-origin').value.trim(),
+          destination:     document.getElementById('e-dest').value.trim(),
+          status:          document.getElementById('e-status').value,
+          carrier:         document.getElementById('e-carrier').value,
+          tracking_number: document.getElementById('e-tracking').value.trim(),
+          eta:             document.getElementById('e-eta').value,
+          notes:           document.getElementById('e-notes').value.trim(),
         }),
       });
       const idx = shipments.findIndex(s => s.id === editId);
       if (idx !== -1) shipments[idx] = updated;
       closeEdit();
-      renderShipments();
-      updateStats();
+      renderShipments(); updateStats();
       showToast('Shipment ' + editId + ' updated', '#60a5fa');
-    } catch (e) {
-      showToast('Error: ' + e.message, '#f87171');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Save Changes';
-    }
+    } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 
-  // ─── Customers ─────────────────────────────────────────────────
+  // ── Search ──────────────────────────────────────────────────────
+  function onSearch(val) {
+    searchQuery = val.trim();
+    clearTimeout(searchTimer);
+    if (!searchQuery) { renderShipments(); return; }
+    // Debounce: wait 300ms after user stops typing, then hit the API
+    searchTimer = setTimeout(async () => {
+      try {
+        const results = await apiFetch('/shipments/search?q=' + encodeURIComponent(searchQuery));
+        renderTable(results);
+        document.getElementById('record-count').textContent = results.length + ' result' + (results.length !== 1 ? 's' : '');
+      } catch (e) { showToast('Search error: ' + e.message, '#f87171'); }
+    }, 300);
+  }
 
+  // ── Customers ───────────────────────────────────────────────────
   async function loadCustomers() {
     try {
       customers = await apiFetch('/customers');
       renderCustomers();
-    } catch (e) {
-      showToast('Failed to load customers: ' + e.message, '#f87171');
-    }
+    } catch (e) { showToast('Failed to load customers: ' + e.message, '#f87171'); }
   }
 
   async function createCustomer() {
     const name  = document.getElementById('c-name').value.trim();
     const email = document.getElementById('c-email').value.trim();
-    const phone = document.getElementById('c-phone').value.trim();
-    const notes = document.getElementById('c-notes').value.trim();
     if (!name || !email) { showToast('Name and email are required', '#f59e0b'); return; }
-
     const btn = document.getElementById('btn-add-customer');
     btn.disabled = true; btn.textContent = 'Adding…';
     try {
-      const newCust = await apiFetch('/customers', {
+      const c = await apiFetch('/customers', {
         method: 'POST',
-        body: JSON.stringify({ name, email, phone, notes }),
+        body: JSON.stringify({ name, email, phone: document.getElementById('c-phone').value.trim(), notes: document.getElementById('c-notes').value.trim() }),
       });
-      customers.push(newCust);
+      customers.push(c);
       ['c-name','c-email','c-phone','c-notes'].forEach(id => document.getElementById(id).value = '');
-      toggleCustomerForm();
-      renderCustomers();
-      showToast('Customer ' + newCust.name + ' added', '#34d399');
-    } catch (e) {
-      showToast('Error: ' + e.message, '#f87171');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Add Customer';
-    }
+      toggleCustomerForm(); renderCustomers();
+      showToast('Customer ' + c.name + ' added', '#34d399');
+    } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    finally { btn.disabled = false; btn.textContent = 'Add Customer'; }
   }
 
   async function deleteCustomer(id) {
@@ -603,63 +598,60 @@
       customers = customers.filter(c => c.id !== id);
       renderCustomers();
       showToast('Customer removed', '#f87171');
-    } catch (e) {
-      showToast('Error: ' + e.message, '#f87171');
-    }
+    } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
   }
 
-  // ─── Render helpers ────────────────────────────────────────────
-
+  // ── Render helpers ───────────────────────────────────────────────
   function badgeClass(s) {
-    if (s === 'Pending')   return 'badge badge-pending';
-    if (s === 'In Transit') return 'badge badge-transit';
-    return 'badge badge-delivered';
+    const map = { 'Pending':'badge-pending','In Transit':'badge-transit','Delivered':'badge-delivered','Delayed':'badge-delayed','Cancelled':'badge-cancelled' };
+    return 'badge ' + (map[s] || 'badge-pending');
+  }
+
+  function getVisibleList() {
+    if (searchQuery) return shipments; // search results already filtered by API
+    return filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
   }
 
   function renderShipments() {
+    if (searchQuery) return; // don't overwrite live search results
+    renderTable(getVisibleList());
+  }
+
+  function renderTable(list) {
     const tbody = document.getElementById('shipment-tbody');
     const empty = document.getElementById('empty-state');
-    const list  = filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
     document.getElementById('record-count').textContent = list.length + ' record' + (list.length !== 1 ? 's' : '');
-
-    if (!list.length) {
-      tbody.innerHTML = '';
-      empty.style.display = 'block';
-      return;
-    }
+    if (!list.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
     tbody.innerHTML = list.map(s => `
       <tr>
         <td class="id-cell">${s.id}</td>
         <td style="font-size:12px;color:var(--rc-muted)">${s.customer_id}</td>
         <td><div class="route-cell">${s.origin} <span class="route-arrow">→</span> ${s.destination}</div></td>
+        <td class="carrier-cell">${s.carrier || '<span style="color:var(--rc-muted)">—</span>'}</td>
+        <td class="tracking-cell">${s.tracking_number || '<span style="color:var(--rc-muted)">—</span>'}</td>
+        <td class="eta-cell">${s.eta || '<span style="color:var(--rc-muted)">—</span>'}</td>
         <td><span class="${badgeClass(s.status)}">${s.status}</span></td>
-        <td class="id-cell">${s.created_at || '—'}</td>
         <td><div class="actions">
-          <button class="btn btn-edit"   onclick="openEdit('${s.id}')">Edit</button>
+          <button class="btn btn-edit" onclick="openEdit('${s.id}')">Edit</button>
           <button class="btn btn-danger" onclick="deleteShipment('${s.id}')">Delete</button>
         </div></td>
       </tr>`).join('');
   }
 
   function updateStats() {
-    const total     = shipments.length;
-    const pending   = shipments.filter(s => s.status === 'Pending').length;
-    const transit   = shipments.filter(s => s.status === 'In Transit').length;
-    const delivered = shipments.filter(s => s.status === 'Delivered').length;
-    document.getElementById('s-total').textContent     = total;
-    document.getElementById('s-pending').textContent   = pending;
-    document.getElementById('s-transit').textContent   = transit;
-    document.getElementById('s-delivered').textContent = delivered;
+    const count = s => shipments.filter(x => x.status === s).length;
+    document.getElementById('s-total').textContent     = shipments.length;
+    document.getElementById('s-pending').textContent   = count('Pending');
+    document.getElementById('s-transit').textContent   = count('In Transit');
+    document.getElementById('s-delivered').textContent = count('Delivered');
+    document.getElementById('s-delayed').textContent   = count('Delayed');
   }
 
   function renderCustomers() {
     const tbody = document.getElementById('customer-tbody');
     document.getElementById('cust-count').textContent = customers.length + ' record' + (customers.length !== 1 ? 's' : '');
-    if (!customers.length) {
-      tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No customers yet.</td></tr>';
-      return;
-    }
+    if (!customers.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No customers yet.</td></tr>'; return; }
     tbody.innerHTML = customers.map(c => `
       <tr>
         <td class="id-cell">${c.id}</td>
@@ -676,15 +668,16 @@
     const pending   = shipments.filter(s => s.status === 'Pending').length;
     const transit   = shipments.filter(s => s.status === 'In Transit').length;
     const delivered = shipments.filter(s => s.status === 'Delivered').length;
+    const delayed   = shipments.filter(s => s.status === 'Delayed').length;
     const rate      = total ? Math.round((delivered / total) * 100) : 0;
 
     document.getElementById('analytics-stats').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Total Shipments</div><div class="stat-value">${total}</div><div class="stat-sub">All time</div></div>
+      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${total}</div><div class="stat-sub">All time</div></div>
       <div class="stat-card"><div class="stat-label">Delivery Rate</div><div class="stat-value" style="color:var(--rc-delivered-text)">${rate}%</div><div class="stat-sub">Completed</div></div>
       <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value" style="color:var(--rc-transit-text)">${customers.length}</div><div class="stat-sub">Registered</div></div>
-      <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value" style="color:var(--rc-pending-text)">${pending + transit}</div><div class="stat-sub">In pipeline</div></div>`;
+      <div class="stat-card"><div class="stat-label">Delayed</div><div class="stat-value" style="color:var(--rc-delayed-text)">${delayed}</div><div class="stat-sub">Needs attention</div></div>`;
 
-    const maxCount = Math.max(pending, transit, delivered, 1);
+    const maxCount = Math.max(pending, transit, delivered, delayed, 1);
     const bar = (label, count, color) => `
       <div class="bar-row">
         <span class="bar-label">${label}</span>
@@ -692,27 +685,37 @@
         <span class="bar-count">${count}</span>
       </div>`;
     document.getElementById('analytics-dist').innerHTML =
-      bar('Pending',   pending,   'var(--rc-pending-text)') +
-      bar('In Transit', transit,  'var(--rc-transit-text)') +
-      bar('Delivered', delivered, 'var(--rc-delivered-text)');
+      bar('Pending',    pending,   'var(--rc-pending-text)') +
+      bar('In Transit', transit,   'var(--rc-transit-text)') +
+      bar('Delivered',  delivered, 'var(--rc-delivered-text)') +
+      bar('Delayed',    delayed,   'var(--rc-delayed-text)');
 
-    const routeMap = {};
-    shipments.forEach(s => {
-      const k = s.origin.split(',')[0] + ' → ' + s.destination.split(',')[0];
-      routeMap[k] = (routeMap[k] || 0) + 1;
-    });
-    const top = Object.entries(routeMap).sort((a,b) => b[1]-a[1]).slice(0,5);
-    document.getElementById('analytics-routes').innerHTML = top.length
-      ? top.map(([route, count]) => `
+    // Carriers
+    const carrierMap = {};
+    shipments.forEach(s => { if (s.carrier) carrierMap[s.carrier] = (carrierMap[s.carrier] || 0) + 1; });
+    const topCarriers = Object.entries(carrierMap).sort((a,b) => b[1]-a[1]).slice(0,5);
+    document.getElementById('analytics-carriers').innerHTML = topCarriers.length
+      ? topCarriers.map(([c, n]) => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)">
-            <span style="font-size:13px">${route}</span>
-            <span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${count}</span>
+            <span style="font-size:13px;font-weight:600">${c}</span>
+            <span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span>
           </div>`).join('')
-      : '<div style="color:var(--rc-muted);font-size:13px">No data yet.</div>';
+      : '<div style="color:var(--rc-muted);font-size:13px">No carrier data yet.</div>';
+
+    // Routes
+    const routeMap = {};
+    shipments.forEach(s => { const k = s.origin.split(',')[0] + ' → ' + s.destination.split(',')[0]; routeMap[k] = (routeMap[k] || 0) + 1; });
+    const topRoutes = Object.entries(routeMap).sort((a,b) => b[1]-a[1]).slice(0,5);
+    document.getElementById('analytics-routes').innerHTML = topRoutes.length
+      ? topRoutes.map(([r, n]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)">
+            <span style="font-size:13px">${r}</span>
+            <span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span>
+          </div>`).join('')
+      : '<div style="color:var(--rc-muted);font-size:13px">No route data yet.</div>';
   }
 
-  // ─── UI interactions ───────────────────────────────────────────
-
+  // ── UI interactions ──────────────────────────────────────────────
   function setView(v) {
     ['shipments','customers','analytics'].forEach(n => {
       document.getElementById('view-' + n).style.display = n === v ? 'block' : 'none';
@@ -723,8 +726,10 @@
 
   function setFilter(f, btn) {
     filterStatus = f;
+    searchQuery  = '';
+    document.getElementById('search-input').value = '';
     document.querySelectorAll('.filter-btn').forEach(b => b.className = 'filter-btn');
-    const map = { all: 'f-all', Pending: 'f-pending', 'In Transit': 'f-transit', Delivered: 'f-delivered' };
+    const map = { all:'f-all', Pending:'f-pending', 'In Transit':'f-transit', Delivered:'f-delivered', Delayed:'f-delayed' };
     btn.classList.add(map[f] || 'f-all');
     renderShipments();
   }
@@ -733,7 +738,6 @@
     const p = document.getElementById('add-form-panel');
     p.style.display = p.style.display === 'none' ? 'block' : 'none';
   }
-
   function toggleCustomerForm() {
     const p = document.getElementById('add-customer-panel');
     p.style.display = p.style.display === 'none' ? 'block' : 'none';
@@ -742,29 +746,28 @@
   function openEdit(id) {
     const s = shipments.find(x => x.id === id);
     editId = id;
-    document.getElementById('e-cid').value    = s.customer_id;
-    document.getElementById('e-origin').value = s.origin;
-    document.getElementById('e-dest').value   = s.destination;
-    document.getElementById('e-status').value = s.status;
+    document.getElementById('e-cid').value      = s.customer_id;
+    document.getElementById('e-origin').value   = s.origin;
+    document.getElementById('e-dest').value     = s.destination;
+    document.getElementById('e-status').value   = s.status;
+    document.getElementById('e-carrier').value  = s.carrier || '';
+    document.getElementById('e-tracking').value = s.tracking_number || '';
+    document.getElementById('e-eta').value      = s.eta || '';
+    document.getElementById('e-notes').value    = s.notes || '';
     document.getElementById('edit-modal-bg').classList.add('open');
   }
-
-  function closeEdit() {
-    document.getElementById('edit-modal-bg').classList.remove('open');
-    editId = null;
-  }
+  function closeEdit() { document.getElementById('edit-modal-bg').classList.remove('open'); editId = null; }
 
   function showToast(msg, color) {
-    const t = document.getElementById('toast');
     document.getElementById('toast-msg').textContent = msg;
     document.getElementById('toast-dot').style.background = color;
+    const t = document.getElementById('toast');
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  // ─── Boot ──────────────────────────────────────────────────────
-
+  // ── Boot ─────────────────────────────────────────────────────────
   checkHealth();
   loadShipments();
   loadCustomers();

@@ -23,8 +23,31 @@ def close_db(e=None):
 
 
 def init_db():
-    """Create tables if they don't already exist."""
+    """Create tables if they don't already exist, and migrate existing ones."""
     db = get_db()
+
+    # ── Step 1: Migrate existing DB BEFORE running full schema script ──
+    # ALTER TABLE must happen before executescript so the CHECK constraint
+    # on the existing table doesn't block the new index creation.
+    try:
+        existing_cols = {
+            row[1] for row in db.execute("PRAGMA table_info(shipments)").fetchall()
+        }
+        migrations = {
+            "carrier":         "ALTER TABLE shipments ADD COLUMN carrier TEXT DEFAULT ''",
+            "tracking_number": "ALTER TABLE shipments ADD COLUMN tracking_number TEXT DEFAULT ''",
+            "eta":             "ALTER TABLE shipments ADD COLUMN eta TEXT DEFAULT ''",
+            "notes":           "ALTER TABLE shipments ADD COLUMN notes TEXT DEFAULT ''",
+        }
+        for col, sql in migrations.items():
+            if col not in existing_cols:
+                db.execute(sql)
+        db.commit()
+    except Exception:
+        # Table doesn't exist yet — step 2 will create it fresh
+        pass
+
+    # ── Step 2: Create tables and indexes if they don't exist ──
     db.executescript("""
         PRAGMA journal_mode=WAL;
 
@@ -37,13 +60,17 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS shipments (
-            id          TEXT PRIMARY KEY,
-            customer_id TEXT NOT NULL,
-            origin      TEXT NOT NULL,
-            destination TEXT NOT NULL,
-            status      TEXT NOT NULL DEFAULT 'Pending'
-                            CHECK(status IN ('Pending', 'In Transit', 'Delivered')),
-            created_at  TEXT NOT NULL,
+            id              TEXT PRIMARY KEY,
+            customer_id     TEXT NOT NULL,
+            origin          TEXT NOT NULL,
+            destination     TEXT NOT NULL,
+            status          TEXT NOT NULL DEFAULT 'Pending'
+                                CHECK(status IN ('Pending', 'In Transit', 'Delivered', 'Delayed', 'Cancelled')),
+            carrier         TEXT DEFAULT '',
+            tracking_number TEXT DEFAULT '',
+            eta             TEXT DEFAULT '',
+            notes           TEXT DEFAULT '',
+            created_at      TEXT NOT NULL,
             FOREIGN KEY (customer_id) REFERENCES customers(id)
         );
 
@@ -52,6 +79,9 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_shipments_status
             ON shipments(status);
+
+        CREATE INDEX IF NOT EXISTS idx_shipments_carrier
+            ON shipments(carrier);
     """)
     db.commit()
 

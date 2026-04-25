@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import get_db, init_db
-from datetime import datetime
+from datetime import datetime, timezone
 
 app = Flask(__name__)
-CORS(app)  # Allows frontend to call the API from any origin
+CORS(app)
 
 # ─────────────────────────────────────────
 #  Initialise DB on startup
@@ -19,10 +19,47 @@ with app.app_context():
 
 @app.route("/shipments", methods=["GET"])
 def get_shipments():
-    """Return all shipments, newest first."""
+    """Return all shipments, newest first. Optional ?status= filter."""
     db = get_db()
+    status_filter = request.args.get("status")
+    if status_filter:
+        rows = db.execute(
+            "SELECT * FROM shipments WHERE status = ? ORDER BY created_at DESC",
+            (status_filter,)
+        ).fetchall()
+    else:
+        rows = db.execute(
+            "SELECT * FROM shipments ORDER BY created_at DESC"
+        ).fetchall()
+    return jsonify([dict(r) for r in rows]), 200
+
+
+@app.route("/shipments/search", methods=["GET"])
+def search_shipments():
+    """
+    Full-text search across shipment fields.
+    Usage: GET /shipments/search?q=fedex
+    Searches: id, customer_id, origin, destination, status,
+              carrier, tracking_number, notes
+    """
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([]), 200
+
+    db = get_db()
+    pattern = f"%{q}%"
     rows = db.execute(
-        "SELECT * FROM shipments ORDER BY created_at DESC"
+        """SELECT * FROM shipments
+           WHERE id               LIKE ?
+              OR customer_id      LIKE ?
+              OR origin           LIKE ?
+              OR destination      LIKE ?
+              OR status           LIKE ?
+              OR carrier          LIKE ?
+              OR tracking_number  LIKE ?
+              OR notes            LIKE ?
+           ORDER BY created_at DESC""",
+        (pattern,) * 8,
     ).fetchall()
     return jsonify([dict(r) for r in rows]), 200
 
@@ -51,26 +88,30 @@ def create_shipment():
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 422
 
-    valid_statuses = {"Pending", "In Transit", "Delivered"}
+    valid_statuses = {"Pending", "In Transit", "Delivered", "Delayed", "Cancelled"}
     if data["status"] not in valid_statuses:
         return jsonify({"error": f"status must be one of: {', '.join(valid_statuses)}"}), 422
 
     db = get_db()
-
-    # Auto-generate a readable shipment ID
     count = db.execute("SELECT COUNT(*) FROM shipments").fetchone()[0]
     shipment_id = f"SHP-{(count + 1):04d}"
 
     db.execute(
-        """INSERT INTO shipments (id, customer_id, origin, destination, status, created_at)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO shipments
+           (id, customer_id, origin, destination, status,
+            carrier, tracking_number, eta, notes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             shipment_id,
             data["customer_id"],
             data["origin"],
             data["destination"],
             data["status"],
-            datetime.utcnow().strftime("%Y-%m-%d"),
+            data.get("carrier", ""),
+            data.get("tracking_number", ""),
+            data.get("eta", ""),
+            data.get("notes", ""),
+            datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         ),
     )
     db.commit()
@@ -93,24 +134,34 @@ def update_shipment(shipment_id):
 
     data = request.get_json(silent=True) or {}
 
-    valid_statuses = {"Pending", "In Transit", "Delivered"}
+    valid_statuses = {"Pending", "In Transit", "Delivered", "Delayed", "Cancelled"}
     if "status" in data and data["status"] not in valid_statuses:
         return jsonify({"error": f"status must be one of: {', '.join(valid_statuses)}"}), 422
 
     current = dict(row)
     updated = {
-        "customer_id": data.get("customer_id", current["customer_id"]),
-        "origin":      data.get("origin",      current["origin"]),
-        "destination": data.get("destination", current["destination"]),
-        "status":      data.get("status",      current["status"]),
+        "customer_id":     data.get("customer_id",     current["customer_id"]),
+        "origin":          data.get("origin",          current["origin"]),
+        "destination":     data.get("destination",     current["destination"]),
+        "status":          data.get("status",          current["status"]),
+        "carrier":         data.get("carrier",         current.get("carrier", "")),
+        "tracking_number": data.get("tracking_number", current.get("tracking_number", "")),
+        "eta":             data.get("eta",             current.get("eta", "")),
+        "notes":           data.get("notes",           current.get("notes", "")),
     }
 
     db.execute(
         """UPDATE shipments
-           SET customer_id=?, origin=?, destination=?, status=?
+           SET customer_id=?, origin=?, destination=?, status=?,
+               carrier=?, tracking_number=?, eta=?, notes=?
            WHERE id=?""",
-        (updated["customer_id"], updated["origin"],
-         updated["destination"], updated["status"], shipment_id),
+        (
+            updated["customer_id"], updated["origin"],
+            updated["destination"], updated["status"],
+            updated["carrier"],     updated["tracking_number"],
+            updated["eta"],         updated["notes"],
+            shipment_id,
+        ),
     )
     db.commit()
 
@@ -180,8 +231,6 @@ def create_customer():
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 422
 
     db = get_db()
-
-    # Check for duplicate email
     existing = db.execute(
         "SELECT id FROM customers WHERE email = ?", (data["email"],)
     ).fetchone()
@@ -231,7 +280,10 @@ def delete_customer(customer_id):
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "timestamp": datetime.utcnow().isoformat()}), 200
+    return jsonify({
+        "status": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }), 200
 
 
 if __name__ == "__main__":
