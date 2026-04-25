@@ -2,12 +2,31 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import get_db, init_db
 from datetime import datetime, timezone
+from email_service import (
+    send_delay_alert,
+    send_delivery_confirmation,
+    send_dispatch_notification,
+)
+import os
+from dotenv import load_dotenv
+
+# Load .env file for local development
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 with app.app_context():
     init_db()
+
+ALERT_EMAIL = os.environ.get("ALERT_EMAIL", os.environ.get("FROM_EMAIL", ""))
+
+
+# ── Helper ─────────────────────────────────────────────────────────────────────
+
+def get_customer_name(db, customer_id: str) -> str:
+    row = db.execute("SELECT name FROM customers WHERE id = ?", (customer_id,)).fetchone()
+    return row["name"] if row else customer_id
 
 
 # ─────────────────────────────────────────
@@ -73,7 +92,7 @@ def create_shipment():
 
     valid_statuses = {"Pending", "In Transit", "Delivered", "Delayed", "Cancelled"}
     if data["status"] not in valid_statuses:
-        return jsonify({"error": f"Invalid status"}), 422
+        return jsonify({"error": "Invalid status"}), 422
 
     db = get_db()
     count = db.execute("SELECT COUNT(*) FROM shipments").fetchone()[0]
@@ -102,7 +121,17 @@ def create_shipment():
     )
     db.commit()
     new_row = db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone()
-    return jsonify(dict(new_row)), 201
+    shipment = dict(new_row)
+
+    # Send alert if created with a triggering status
+    if ALERT_EMAIL:
+        customer_name = get_customer_name(db, shipment["customer_id"])
+        if shipment["status"] == "Delayed":
+            send_delay_alert(ALERT_EMAIL, shipment, customer_name)
+        elif shipment["status"] == "Delivered":
+            send_delivery_confirmation(ALERT_EMAIL, shipment, customer_name)
+
+    return jsonify(shipment), 201
 
 
 @app.route("/shipments/<string:shipment_id>", methods=["PUT"])
@@ -117,7 +146,9 @@ def update_shipment(shipment_id):
     if "status" in data and data["status"] not in valid_statuses:
         return jsonify({"error": "Invalid status"}), 422
 
-    current = dict(row)
+    current       = dict(row)
+    previous_status = current["status"]
+
     updated = {
         "customer_id":      data.get("customer_id",      current["customer_id"]),
         "origin":           data.get("origin",           current["origin"]),
@@ -145,16 +176,22 @@ def update_shipment(shipment_id):
         ),
     )
     db.commit()
-    refreshed = db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone()
-    return jsonify(dict(refreshed)), 200
+    refreshed = dict(db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone())
+
+    # ── Trigger email alerts on status change ──────────────────────
+    new_status = updated["status"]
+    if ALERT_EMAIL and new_status != previous_status:
+        customer_name = get_customer_name(db, refreshed["customer_id"])
+        if new_status == "Delayed":
+            send_delay_alert(ALERT_EMAIL, refreshed, customer_name)
+        elif new_status == "Delivered":
+            send_delivery_confirmation(ALERT_EMAIL, refreshed, customer_name)
+
+    return jsonify(refreshed), 200
 
 
 @app.route("/shipments/<string:shipment_id>/dispatch", methods=["POST"])
 def dispatch_shipment(shipment_id):
-    """
-    Mark a shipment as dispatched.
-    When SMS/email is wired up, this is where the message sends.
-    """
     db = get_db()
     row = db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone()
     if not row:
@@ -164,47 +201,50 @@ def dispatch_shipment(shipment_id):
     if not shipment.get("driver_id"):
         return jsonify({"error": "Assign a driver before dispatching"}), 422
 
-    # Get driver details
-    driver = db.execute(
+    driver_row = db.execute(
         "SELECT * FROM drivers WHERE id = ?", (shipment["driver_id"],)
     ).fetchone()
-    if not driver:
+    if not driver_row:
         return jsonify({"error": "Assigned driver not found"}), 404
 
-    driver = dict(driver)
+    driver = dict(driver_row)
 
-    # Mark dispatch sent and update status to In Transit
     db.execute(
         "UPDATE shipments SET dispatch_sent=1, status='In Transit' WHERE id=?",
         (shipment_id,)
     )
-    # Mark driver as On Route
-    db.execute(
-        "UPDATE drivers SET status='On Route' WHERE id=?",
-        (driver["id"],)
-    )
+    db.execute("UPDATE drivers SET status='On Route' WHERE id=?", (driver["id"],))
     db.commit()
 
-    # Build the dispatch message (ready for SMS/email later)
-    message = (
+    refreshed = dict(db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone())
+
+    # ── Send dispatch email to driver ──────────────────────────────
+    email_result = {"success": False, "error": "No driver email on file"}
+    if driver.get("email"):
+        email_result = send_dispatch_notification(driver["email"], refreshed, driver)
+    # Also notify the admin
+    if ALERT_EMAIL:
+        send_dispatch_notification(ALERT_EMAIL, refreshed, driver)
+
+    dispatch_message = (
         f"RouteCore Dispatch — New Pickup\n\n"
-        f"Driver: {driver['name']}\n"
-        f"Shipment: {shipment_id}\n"
-        f"Container: {shipment.get('container_number') or 'N/A'}\n"
-        f"Pickup: {shipment['origin']}\n"
-        f"Deliver to: {shipment['destination']}\n"
-        f"ETA: {shipment.get('eta') or 'TBD'}\n"
-        f"Carrier: {shipment.get('carrier') or 'N/A'}\n"
-        f"Notes: {shipment.get('notes') or 'None'}"
+        f"Driver:     {driver['name']}\n"
+        f"Phone:      {driver['phone']}\n"
+        f"Shipment:   {shipment_id}\n"
+        f"Container:  {refreshed.get('container_number') or 'N/A'}\n"
+        f"Pickup:     {refreshed['origin']}\n"
+        f"Deliver to: {refreshed['destination']}\n"
+        f"ETA:        {refreshed.get('eta') or 'TBD'}\n"
+        f"Carrier:    {refreshed.get('carrier') or 'N/A'}\n"
+        f"Notes:      {refreshed.get('notes') or 'None'}"
     )
 
-    refreshed = db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone()
     return jsonify({
-        "shipment": dict(refreshed),
-        "driver": driver,
-        "dispatch_message": message,
-        "sms_ready": True,   # flip to True when Twilio is connected
-        "message": f"Dispatch recorded. Driver {driver['name']} assigned to {shipment_id}."
+        "shipment":         refreshed,
+        "driver":           driver,
+        "dispatch_message": dispatch_message,
+        "email_sent":       email_result.get("success", False),
+        "message":          f"Dispatched. Driver {driver['name']} notified for {shipment_id}."
     }), 200
 
 
@@ -237,7 +277,6 @@ def get_driver(driver_id):
     if not row:
         return jsonify({"error": "Driver not found"}), 404
     driver = dict(row)
-    # Include their active shipments
     shipments = db.execute(
         "SELECT * FROM shipments WHERE driver_id = ? ORDER BY created_at DESC", (driver_id,)
     ).fetchall()
@@ -250,27 +289,20 @@ def create_driver():
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "Request body must be JSON"}), 400
-
     required = ["name", "phone"]
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 422
-
     db = get_db()
     count = db.execute("SELECT COUNT(*) FROM drivers").fetchone()[0]
     driver_id = f"DRV-{(count + 1):03d}"
-
     db.execute(
         """INSERT INTO drivers (id, name, phone, email, license, carrier, status, notes, created_at)
            VALUES (?, ?, ?, ?, ?, ?, 'Available', ?, ?)""",
         (
-            driver_id,
-            data["name"],
-            data["phone"],
-            data.get("email", ""),
-            data.get("license", ""),
-            data.get("carrier", ""),
-            data.get("notes", ""),
+            driver_id, data["name"], data["phone"],
+            data.get("email", ""), data.get("license", ""),
+            data.get("carrier", ""), data.get("notes", ""),
             datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         ),
     )
@@ -285,12 +317,10 @@ def update_driver(driver_id):
     row = db.execute("SELECT * FROM drivers WHERE id = ?", (driver_id,)).fetchone()
     if not row:
         return jsonify({"error": "Driver not found"}), 404
-
     data = request.get_json(silent=True) or {}
     valid_statuses = {"Available", "On Route", "Off Duty"}
     if "status" in data and data["status"] not in valid_statuses:
         return jsonify({"error": "Invalid driver status"}), 422
-
     current = dict(row)
     db.execute(
         """UPDATE drivers SET name=?, phone=?, email=?, license=?, carrier=?, status=?, notes=?
@@ -388,7 +418,11 @@ def delete_customer(customer_id):
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}), 200
+    return jsonify({
+        "status": "ok",
+        "email_configured": bool(ALERT_EMAIL),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }), 200
 
 
 if __name__ == "__main__":
