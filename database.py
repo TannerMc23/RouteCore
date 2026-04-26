@@ -43,6 +43,16 @@ def init_db():
     db.executescript("""
         PRAGMA journal_mode=WAL;
 
+        CREATE TABLE IF NOT EXISTS users (
+            id         TEXT PRIMARY KEY,
+            name       TEXT NOT NULL,
+            email      TEXT NOT NULL UNIQUE,
+            password   TEXT NOT NULL,
+            role       TEXT NOT NULL DEFAULT 'Viewer'
+                           CHECK(role IN ('Admin', 'Dispatcher', 'Viewer')),
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS customers (
             id    TEXT PRIMARY KEY,
             name  TEXT NOT NULL,
@@ -82,15 +92,16 @@ def init_db():
             FOREIGN KEY (customer_id) REFERENCES customers(id)
         );
 
-        CREATE INDEX IF NOT EXISTS idx_shipments_customer  ON shipments(customer_id);
-        CREATE INDEX IF NOT EXISTS idx_shipments_status    ON shipments(status);
-        CREATE INDEX IF NOT EXISTS idx_shipments_carrier   ON shipments(carrier);
-        CREATE INDEX IF NOT EXISTS idx_shipments_driver    ON shipments(driver_id);
-        CREATE INDEX IF NOT EXISTS idx_drivers_status      ON drivers(status);
+        CREATE INDEX IF NOT EXISTS idx_shipments_customer ON shipments(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_shipments_status   ON shipments(status);
+        CREATE INDEX IF NOT EXISTS idx_shipments_carrier  ON shipments(carrier);
+        CREATE INDEX IF NOT EXISTS idx_shipments_driver   ON shipments(driver_id);
+        CREATE INDEX IF NOT EXISTS idx_drivers_status     ON drivers(status);
+        CREATE INDEX IF NOT EXISTS idx_users_email        ON users(email);
     """)
     db.commit()
 
-    # Step 3: Migrate drivers table if it already existed without new cols
+    # Step 3: Migrate drivers table if needed
     try:
         existing_driver_cols = {row[1] for row in db.execute("PRAGMA table_info(drivers)").fetchall()}
         driver_migrations = {

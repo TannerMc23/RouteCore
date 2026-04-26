@@ -146,7 +146,8 @@ td{padding:11px 14px;vertical-align:middle;}
   </div>
   <div class="topbar-right">
     <span><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting…</span></span>
-    <span>v1.2.0</span>
+    <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--rc-card);border:1px solid var(--rc-border);border-radius:7px;"></div>
+    <button onclick="logout()" style="background:transparent;border:1px solid var(--rc-border);color:var(--rc-muted);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;" onmouseover="this.style.color='#f87171';this.style.borderColor='#7f1d1d'" onmouseout="this.style.color='var(--rc-muted)';this.style.borderColor='var(--rc-border)'">Sign Out</button>
   </div>
 </div>
 
@@ -166,6 +167,9 @@ td{padding:11px 14px;vertical-align:middle;}
       <div class="nav-item" id="nav-analytics" onclick="setView('analytics')">
         <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics
       </div>
+      <div class="nav-item admin-only" id="nav-team" onclick="setView('team')">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team
+      </div>
     </div>
     <div class="sidebar-section">
       <div class="sidebar-label">System</div>
@@ -181,7 +185,7 @@ td{padding:11px 14px;vertical-align:middle;}
     <div id="view-shipments">
       <div class="page-header">
         <div><div class="page-title">Shipment Dashboard</div><div class="page-sub">Manage and track all container shipments</div></div>
-        <button class="btn btn-primary" onclick="toggleForm('add-form-panel')">
+        <button class="btn btn-primary write-only" onclick="toggleForm('add-form-panel')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Shipment
         </button>
       </div>
@@ -354,7 +358,24 @@ td{padding:11px 14px;vertical-align:middle;}
         <div class="panel-body" id="analytics-routes"></div>
       </div>
     </div>
-
+     <!-- ══ TEAM ══ -->
+    <div id="view-team" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">Team Management</div><div class="page-sub">Manage user accounts and roles</div></div>
+        <button class="btn btn-primary" onclick="window.open('login.html','_blank')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add User
+        </button>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">Team Members</div><span id="team-count" style="font-size:12px;color:var(--rc-muted);"></span></div>
+        <div class="panel-body" style="padding:0">
+          <table>
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+            <tbody id="team-tbody"><tr class="loading-row"><td colspan="6">Loading team…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -437,7 +458,7 @@ td{padding:11px 14px;vertical-align:middle;}
 <div class="toast" id="toast"><div class="toast-dot" id="toast-dot"></div><span id="toast-msg"></span></div>
 
 <script>
-const API = 'https://routecore.onrender.com';
+const API = 'http://127.0.0.1:5000'; // ← change to your Render URL for production
 
 let shipments   = [];
 let customers   = [];
@@ -863,11 +884,14 @@ function renderAnalytics() {
 
 // ── UI helpers ────────────────────────────────────────────────
 function setView(v) {
-  ['shipments','drivers','customers','analytics'].forEach(n => {
-    document.getElementById('view-'+n).style.display = n===v ? 'block' : 'none';
-    document.getElementById('nav-'+n).classList.toggle('active', n===v);
+  ['shipments','drivers','customers','analytics','team'].forEach(n => {
+    const el = document.getElementById('view-' + n);
+    if (el) el.style.display = n === v ? 'block' : 'none';
+    const nav = document.getElementById('nav-' + n);
+    if (nav) nav.classList.toggle('active', n === v);
   });
   if (v === 'analytics') renderAnalytics();
+  if (v === 'team') loadTeam();
 }
 
 function setFilter(f, btn) {
@@ -914,9 +938,111 @@ function showToast(msg, color) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// ── Auth ──────────────────────────────────────────────────────
+let currentUser = null;
+
+async function checkAuth() {
+  try {
+    const res = await fetch(API + '/auth/me', { credentials: 'include' });
+    if (!res.ok) { window.location.href = 'login.html'; return; }
+    currentUser = await res.json();
+    sessionStorage.setItem('rc_user', JSON.stringify(currentUser));
+    applyRoleUI();
+    updateUserBadge();
+  } catch {
+    window.location.href = 'login.html';
+  }
+}
+
+function applyRoleUI() {
+  const role = currentUser?.role;
+  if (role === 'Viewer') {
+    document.querySelectorAll('.write-only').forEach(el => el.style.display = 'none');
+  }
+  if (role !== 'Admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  }
+}
+
+function updateUserBadge() {
+  const badge = document.getElementById('user-badge');
+  if (!badge || !currentUser) return;
+  const roleColors = { Admin: '#3b82f6', Dispatcher: '#f59e0b', Viewer: '#6b7280' };
+  badge.innerHTML = `
+    <span style="font-size:12px;color:var(--rc-muted)">${currentUser.name}</span>
+    <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:${roleColors[currentUser.role]}22;color:${roleColors[currentUser.role]}">${currentUser.role}</span>`;
+}
+
+async function logout() {
+  await fetch(API + '/auth/logout', { method: 'POST', credentials: 'include' });
+  sessionStorage.removeItem('rc_user');
+  window.location.href = 'login.html';
+}
+
+// ── Team Management ───────────────────────────────────────────
+let teamMembers = [];
+
+async function loadTeam() {
+  try {
+    teamMembers = await apiFetch('/auth/users');
+    renderTeam();
+  } catch (e) { showToast('Failed to load team: ' + e.message, '#f87171'); }
+}
+
+function roleClass(r) {
+  const map = { Admin: 'badge-transit', Dispatcher: 'badge-pending', Viewer: 'badge-cancelled' };
+  return 'badge ' + (map[r] || 'badge-cancelled');
+}
+
+function renderTeam() {
+  const tbody = document.getElementById('team-tbody');
+  document.getElementById('team-count').textContent = teamMembers.length + ' member' + (teamMembers.length !== 1 ? 's' : '');
+  if (!teamMembers.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No team members yet.</td></tr>'; return; }
+  tbody.innerHTML = teamMembers.map(u => `
+    <tr>
+      <td class="id-cell">${u.id}</td>
+      <td style="font-weight:600">${u.name}${u.id === currentUser?.id ? ' <span style="font-size:10px;color:var(--rc-muted)">(you)</span>' : ''}</td>
+      <td style="font-size:12px;color:var(--rc-muted)">${u.email}</td>
+      <td><span class="${roleClass(u.role)}">${u.role}</span></td>
+      <td class="id-cell">${u.created_at}</td>
+      <td><div class="actions">
+        ${u.id !== currentUser?.id ? `<button class="btn btn-danger" onclick="deleteTeamMember('${u.id}','${u.name}')">Remove</button>` : '<span style="font-size:12px;color:var(--rc-muted)">—</span>'}
+      </div></td>
+    </tr>`).join('');
+}
+
+async function deleteTeamMember(id, name) {
+  if (!confirm(`Remove ${name} from the team?`)) return;
+  try {
+    await apiFetch('/auth/users/' + id, { method: 'DELETE' });
+    teamMembers = teamMembers.filter(u => u.id !== id);
+    renderTeam();
+    showToast(name + ' removed from team', '#f87171');
+  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+}
+
+
+// ── Override apiFetch to include credentials ──────────────────
+const _baseApiFetch = apiFetch;
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    ...options,
+  });
+  if (res.status === 401) { window.location.href = 'login.html'; return; }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error || `HTTP ${res.status}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
 // ── Boot ──────────────────────────────────────────────────────
-checkHealth();
-loadAll();
+checkAuth().then(() => {
+  checkHealth();
+  loadAll();
+});
 </script>
 </body>
 </html>

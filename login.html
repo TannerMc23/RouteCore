@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RouteCore — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0c10; --surface: #12151c; --card: #1a1e28; --border: #252a38;
+  --text: #e8eaf0; --muted: #6b7280; --accent: #3b82f6;
+}
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 80%);
+}
+.container {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 420px;
+}
+.logo {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; margin-bottom: 32px;
+  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+  text-decoration: none; color: var(--text);
+}
+.logo-icon {
+  width: 32px; height: 32px; background: var(--accent);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+}
+.logo-icon svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 2; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 32px;
+}
+.card-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.card-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.tabs {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--surface); border-radius: 8px; padding: 4px;
+  margin-bottom: 24px; gap: 4px;
+}
+.tab {
+  padding: 8px; text-align: center; font-size: 13px; font-weight: 600;
+  border-radius: 6px; cursor: pointer; color: var(--muted); transition: all 0.15s;
+  border: none; background: transparent; font-family: 'Syne', sans-serif;
+}
+.tab.active { background: var(--card); color: var(--text); }
+.form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.form-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted); }
+.form-input {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 14px; font-size: 14px;
+  color: var(--text); font-family: 'Syne', sans-serif;
+  outline: none; transition: border-color 0.15s; width: 100%;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--muted); }
+.form-select {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 14px; font-size: 14px;
+  color: var(--text); font-family: 'Syne', sans-serif;
+  outline: none; width: 100%; cursor: pointer;
+}
+.form-select option { background: var(--surface); }
+.btn {
+  width: 100%; padding: 11px; border-radius: 7px; font-size: 14px;
+  font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+  font-family: 'Syne', sans-serif; margin-top: 8px;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover:not(:disabled) { background: #2563eb; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.error-box {
+  background: #2d0f0f; border: 1px solid #7f1d1d;
+  border-radius: 7px; padding: 10px 14px;
+  font-size: 13px; color: #f87171; margin-bottom: 16px; display: none;
+}
+.success-box {
+  background: #0d2818; border: 1px solid #065f46;
+  border-radius: 7px; padding: 10px 14px;
+  font-size: 13px; color: #34d399; margin-bottom: 16px; display: none;
+}
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+.footer-text { text-align: center; font-size: 13px; color: var(--muted); margin-top: 24px; }
+.footer-text a { color: var(--accent); text-decoration: none; }
+.role-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 700;
+}
+.role-admin      { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.role-dispatcher { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.role-viewer     { background: rgba(107,114,128,0.15); color: #9ca3af; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <a href="landing.html" class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    RouteCore
+  </a>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="showTab('login')">Sign In</button>
+      <button class="tab" id="tab-register" onclick="showTab('register')">Add User</button>
+    </div>
+
+    <!-- ── LOGIN FORM ── -->
+    <div id="form-login">
+      <div class="card-title">Welcome back</div>
+      <div class="card-sub">Sign in to your RouteCore account</div>
+      <div class="error-box" id="login-error"></div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="login-email" type="email" placeholder="you@company.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="login-password" type="password" placeholder="••••••••"
+          onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Sign In</button>
+    </div>
+
+    <!-- ── REGISTER FORM (Admin only) ── -->
+    <div id="form-register" style="display:none">
+      <div class="card-title">Add Team Member</div>
+      <div class="card-sub">Admin access required to create accounts</div>
+      <div class="error-box" id="reg-error"></div>
+      <div class="success-box" id="reg-success"></div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:20px;font-size:13px;color:var(--muted);">
+        🔒 You must be logged in as <strong style="color:var(--text)">Admin</strong> to create accounts.
+        <a href="#" onclick="showTab('login')" style="color:var(--accent);text-decoration:none;">Sign in first →</a>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="reg-name" placeholder="John Smith" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="reg-email" type="email" placeholder="john@company.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" id="reg-password" type="password" placeholder="Min 6 characters" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role</label>
+        <select class="form-select" id="reg-role">
+          <option value="Dispatcher">Dispatcher — can add/edit/dispatch</option>
+          <option value="Viewer">Viewer — read only</option>
+          <option value="Admin">Admin — full access</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btn-register" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+
+  <div class="footer-text">
+    <a href="landing.html">← Back to home</a>
+  </div>
+</div>
+
+<script>
+  const API = 'http://127.0.0.1:5000'; // ← change to Render URL for production
+
+  function showTab(tab) {
+    document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
+    document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active',    tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+  }
+  function hideError(id) { document.getElementById(id).style.display = 'none'; }
+  function showSuccess(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+  }
+
+  async function doLogin() {
+    hideError('login-error');
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) { showError('login-error', 'Email and password are required'); return; }
+
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.textContent = 'Signing in…';
+
+    try {
+      const res = await fetch(API + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showError('login-error', data.error || 'Login failed'); return; }
+
+      // Store user info in sessionStorage for the dashboard
+      sessionStorage.setItem('rc_user', JSON.stringify(data));
+      window.location.href = 'index.html';
+    } catch (e) {
+      showError('login-error', 'Could not connect to server. Is Flask running?');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Sign In';
+    }
+  }
+
+  async function doRegister() {
+    hideError('reg-error');
+    document.getElementById('reg-success').style.display = 'none';
+
+    const name     = document.getElementById('reg-name').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const role     = document.getElementById('reg-role').value;
+    if (!name || !email || !password) { showError('reg-error', 'All fields are required'); return; }
+
+    const btn = document.getElementById('btn-register');
+    btn.disabled = true; btn.textContent = 'Creating…';
+
+    try {
+      const res = await fetch(API + '/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name, email, password, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showError('reg-error', data.error || 'Registration failed'); return; }
+
+      showSuccess('reg-success', `✓ Account created for ${data.name} (${data.role})`);
+      document.getElementById('reg-name').value     = '';
+      document.getElementById('reg-email').value    = '';
+      document.getElementById('reg-password').value = '';
+    } catch (e) {
+      showError('reg-error', 'Could not connect to server.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
+  }
+
+  // Check if already logged in
+  window.addEventListener('load', async () => {
+    try {
+      const res = await fetch(API + '/auth/me', { credentials: 'include' });
+      if (res.ok) {
+        const user = await res.json();
+        sessionStorage.setItem('rc_user', JSON.stringify(user));
+        window.location.href = 'index.html';
+      }
+    } catch {}
+  });
+</script>
+</body>
+</html>
