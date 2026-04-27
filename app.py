@@ -19,7 +19,8 @@ app = Flask(__name__)
 CORS(app, origins=[
     "http://127.0.0.1:5500",
     "http://localhost:5500",
-    "https://tannermc23.github.io"
+    "https://tannermc23.github.io",
+    "*"  # portal is public — allow all origins for portal endpoint
 ])
 
 with app.app_context():
@@ -669,6 +670,40 @@ def delete_customer(customer_id):
     db.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
     db.commit()
     return jsonify({"message": f"Customer {customer_id} deleted"}), 200
+
+
+# ─────────────────────────────────────────
+#  PUBLIC CUSTOMER PORTAL
+# ─────────────────────────────────────────
+
+@app.route("/portal/shipment/<string:shipment_id>", methods=["GET"])
+def portal_get_shipment(shipment_id):
+    """
+    Public endpoint — no auth required.
+    Returns limited shipment info for the customer tracking portal.
+    Intentionally excludes internal fields like driver_id, dispatch_sent.
+    """
+    db  = get_db()
+    row = db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id.upper(),)).fetchone()
+    if not row:
+        return jsonify({"error": "Shipment not found"}), 404
+
+    s = dict(row)
+    # Only expose customer-safe fields
+    public = {
+        "id":               s["id"],
+        "origin":           s["origin"],
+        "destination":      s["destination"],
+        "status":           s["status"],
+        "shipment_type":    s.get("shipment_type", "Other"),
+        "carrier":          s.get("carrier", ""),
+        "tracking_number":  s.get("tracking_number", ""),
+        "container_number": s.get("container_number", ""),
+        "eta":              s.get("eta", ""),
+        "notes":            s.get("notes", ""),
+        "created_at":       s.get("created_at", ""),
+    }
+    return jsonify(public), 200
 
 
 # ─────────────────────────────────────────

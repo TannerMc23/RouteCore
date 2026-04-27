@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RouteCore — Track Your Shipment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0c10;--surface:#12151c;--card:#1a1e28;--border:#252a38;
+  --text:#e8eaf0;--muted:#6b7280;--accent:#3b82f6;--accent2:#00c9a7;
+  --pending-bg:#2d1f00;--pending-text:#f59e0b;--pending-border:#92400e;
+  --transit-bg:#0d1f3c;--transit-text:#60a5fa;--transit-border:#1e40af;
+  --delivered-bg:#0d2818;--delivered-text:#34d399;--delivered-border:#065f46;
+  --delayed-bg:#2d0f0f;--delayed-text:#f87171;--delayed-border:#7f1d1d;
+  --cancelled-bg:#1a1a1a;--cancelled-text:#9ca3af;--cancelled-border:#374151;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column;}
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(59,130,246,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,black 30%,transparent 80%);
+}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:50;background:rgba(10,12,16,0.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-0.5px;text-decoration:none;color:var(--text);}
+.nav-logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.nav-logo-icon svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2;}
+.nav-right{display:flex;align-items:center;gap:14px;font-size:13px;}
+.nav-right a{color:var(--muted);text-decoration:none;transition:color 0.15s;}
+.nav-right a:hover{color:var(--text);}
+.btn-nav{background:var(--accent);color:white;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;transition:all 0.15s;}
+.btn-nav:hover{background:#2563eb;}
+
+/* MAIN */
+main{flex:1;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding:60px 24px 80px;}
+
+/* SEARCH SECTION */
+.search-section{width:100%;max-width:600px;text-align:center;margin-bottom:48px;}
+.search-eyebrow{display:inline-flex;align-items:center;gap:7px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#6ba3ff;margin-bottom:20px;}
+.search-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:#6ba3ff;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.search-title{font-size:clamp(32px,6vw,52px);font-weight:700;letter-spacing:-1px;margin-bottom:12px;line-height:1.1;}
+.search-sub{font-size:15px;color:var(--muted);margin-bottom:32px;line-height:1.6;}
+.search-box{display:flex;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;transition:border-color 0.2s;}
+.search-box:focus-within{border-color:var(--accent);}
+.search-box input{flex:1;background:transparent;border:none;outline:none;font-size:15px;color:var(--text);font-family:'Syne',sans-serif;padding:6px 8px;}
+.search-box input::placeholder{color:var(--muted);}
+.search-btn{background:var(--accent);color:white;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.search-btn:hover{background:#2563eb;}
+.search-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.search-hint{font-size:12px;color:var(--muted);margin-top:12px;}
+
+/* ERROR STATE */
+.error-card{background:var(--delayed-bg);border:1px solid var(--delayed-border);border-radius:12px;padding:24px;text-align:center;color:var(--delayed-text);width:100%;max-width:600px;margin-top:8px;}
+.error-card h3{font-size:16px;font-weight:700;margin-bottom:6px;}
+.error-card p{font-size:13px;opacity:0.8;}
+
+/* RESULT CARD */
+.result-wrap{width:100%;max-width:720px;}
+
+.shipment-header{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;position:relative;overflow:hidden;}
+.shipment-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.shipment-id-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;}
+.shipment-id{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+.status-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;border:1px solid;}
+.status-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.status-pending{background:var(--pending-bg);color:var(--pending-text);border-color:var(--pending-border);}
+.status-transit{background:var(--transit-bg);color:var(--transit-text);border-color:var(--transit-border);}
+.status-delivered{background:var(--delivered-bg);color:var(--delivered-text);border-color:var(--delivered-border);}
+.status-delayed{background:var(--delayed-bg);color:var(--delayed-text);border-color:var(--delayed-border);}
+.status-cancelled{background:var(--cancelled-bg);color:var(--cancelled-text);border-color:var(--cancelled-border);}
+
+/* Route display */
+.route-display{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+.route-point{flex:1;min-width:140px;}
+.route-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.route-value{font-size:15px;font-weight:600;}
+.route-connector{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.route-line{width:40px;height:1px;background:var(--border);}
+.route-arrow-icon{color:var(--accent);font-size:18px;}
+
+/* Details grid */
+.details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.detail-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+.detail-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.detail-value{font-size:13px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+
+/* Progress timeline */
+.progress-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;}
+.progress-title{font-size:14px;font-weight:700;margin-bottom:24px;}
+.progress-bar{display:flex;align-items:center;margin-bottom:24px;}
+.progress-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;}
+.progress-step:last-child{flex:0;}
+.progress-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid var(--border);background:var(--surface);flex-shrink:0;transition:all 0.3s;}
+.progress-dot.completed{background:var(--accent);border-color:var(--accent);color:white;}
+.progress-dot.current{background:var(--card);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,0.15);}
+.progress-dot.delayed{background:var(--delayed-bg);border-color:var(--delayed-border);color:var(--delayed-text);}
+.progress-line{flex:1;height:2px;background:var(--border);margin:0 4px;transition:background 0.3s;}
+.progress-line.completed{background:var(--accent);}
+.progress-label{font-size:11px;font-weight:600;color:var(--muted);text-align:center;}
+.progress-label.active{color:var(--text);}
+
+/* Alert banners */
+.alert-banner{border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:13px;font-weight:500;}
+.alert-delayed{background:var(--delayed-bg);border:1px solid var(--delayed-border);color:var(--delayed-text);}
+.alert-delivered{background:var(--delivered-bg);border:1px solid var(--delivered-border);color:var(--delivered-text);}
+.alert-icon{font-size:18px;flex-shrink:0;}
+
+/* Share + refresh */
+.action-row{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-action{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:'Syne',sans-serif;}
+.btn-copy{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+.btn-copy:hover{border-color:var(--accent);color:var(--accent);}
+.btn-refresh{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-refresh:hover{color:var(--text);}
+.btn-new{background:var(--accent);color:white;}
+.btn-new:hover{background:#2563eb;}
+
+/* Footer */
+footer{position:relative;z-index:1;border-top:1px solid var(--border);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);}
+footer a{color:var(--muted);text-decoration:none;}
+footer a:hover{color:var(--text);}
+
+/* Type chip */
+.type-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);color:#6ba3ff;}
+
+/* Loading spinner */
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin:32px auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Responsive */
+@media(max-width:600px){
+  nav{padding:0 16px;}
+  main{padding:40px 16px 60px;}
+  .details-grid{grid-template-columns:1fr 1fr;}
+  .progress-label{font-size:9px;}
+  footer{flex-direction:column;text-align:center;}
+  .action-row{justify-content:center;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="landing.html" class="nav-logo">
+    <div class="nav-logo-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+    RouteCore
+  </a>
+  <div class="nav-right">
+    <a href="landing.html">Home</a>
+    <a href="login.html" class="btn-nav">Staff Login</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- Search section (always visible) -->
+  <div class="search-section">
+    <div class="search-eyebrow">Live Shipment Tracking</div>
+    <h1 class="search-title">Track Your Shipment</h1>
+    <p class="search-sub">Enter your shipment ID to get real-time status, location, and delivery updates.</p>
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Enter shipment ID — e.g. SHP-0001"
+        onkeydown="if(event.key==='Enter')trackShipment()"
+        oninput="this.value=this.value.toUpperCase()"/>
+      <button class="search-btn" id="search-btn" onclick="trackShipment()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Track
+      </button>
+    </div>
+    <div class="search-hint">Your shipment ID was provided by the sender — e.g. <strong style="color:var(--text);font-family:'IBM Plex Mono',monospace">SHP-0001</strong></div>
+  </div>
+
+  <!-- Dynamic result area -->
+  <div id="result-area" style="width:100%;max-width:720px;"></div>
+
+</main>
+
+<footer>
+  <span>© 2026 RouteCore — Logistics Management Platform</span>
+  <span><a href="landing.html">Home</a> · <a href="login.html">Staff Login</a></span>
+</footer>
+
+<script>
+  const API = 'http://127.0.0.1:5000'; // local dev: http://127.0.0.1:5000
+
+  // Check URL params on load (allows direct links like portal.html?id=SHP-0001)
+  window.addEventListener('load', () => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id') || params.get('shipment');
+    if (id) {
+      document.getElementById('search-input').value = id.toUpperCase();
+      trackShipment();
+    }
+  });
+
+  function typeEmoji(t) {
+    const m = { 'Shipping Container':'📦','Tires':'🔘','Tire Buffings':'⚙️','Other':'📋' };
+    return m[t] || '📋';
+  }
+
+  function statusClass(s) {
+    const m = { 'Pending':'status-pending','In Transit':'status-transit','Delivered':'status-delivered','Delayed':'status-delayed','Cancelled':'status-cancelled' };
+    return m[s] || 'status-pending';
+  }
+
+  function buildProgressBar(status) {
+    const steps = [
+      { label:'Order Created', icon:'📋' },
+      { label:'Pending Pickup', icon:'⏳' },
+      { label:'In Transit', icon:'🚚' },
+      { label:'Delivered', icon:'✅' },
+    ];
+
+    const statusIndex = {
+      'Pending': 1,
+      'In Transit': 2,
+      'Delivered': 3,
+      'Delayed': 2,
+      'Cancelled': -1,
+    };
+
+    const currentIdx = statusIndex[status] ?? 1;
+    const isDelayed = status === 'Delayed';
+    const isCancelled = status === 'Cancelled';
+
+    let html = '<div class="progress-bar">';
+    steps.forEach((step, i) => {
+      const completed = i < currentIdx && !isCancelled;
+      const current   = i === currentIdx && !isCancelled;
+      const dotClass  = isCancelled ? '' : completed ? 'completed' : current ? (isDelayed ? 'delayed' : 'current') : '';
+      const lineClass = completed && i < steps.length - 1 ? 'completed' : '';
+
+      html += `<div class="progress-step">
+        <div class="progress-dot ${dotClass}">${step.icon}</div>
+        <div class="progress-label ${current||completed?'active':''}">${step.label}</div>
+      </div>`;
+
+      if (i < steps.length - 1) {
+        html += `<div class="progress-line ${lineClass}"></div>`;
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function buildResult(s) {
+    const statusCls = statusClass(s.status);
+
+    // Alert banners
+    let alertHtml = '';
+    if (s.status === 'Delayed') {
+      alertHtml = `<div class="alert-banner alert-delayed">
+        <span class="alert-icon">⚠️</span>
+        <div><strong>Shipment Delayed</strong> — This shipment has encountered a delay. Our team is working to resolve it. Please check back for updates.</div>
+      </div>`;
+    } else if (s.status === 'Delivered') {
+      alertHtml = `<div class="alert-banner alert-delivered">
+        <span class="alert-icon">✅</span>
+        <div><strong>Successfully Delivered</strong> — Your shipment has been delivered. Thank you for choosing RouteCore.</div>
+      </div>`;
+    }
+
+    const shareUrl = window.location.origin + window.location.pathname + '?id=' + s.id;
+
+    return `
+      ${alertHtml}
+
+      <div class="shipment-header">
+        <div class="shipment-id-row">
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Shipment ID</div>
+            <div class="shipment-id">${s.id}</div>
+          </div>
+          <span class="status-badge ${statusCls}">${s.status}</span>
+        </div>
+
+        <div class="route-display">
+          <div class="route-point">
+            <div class="route-label">Origin</div>
+            <div class="route-value">${s.origin}</div>
+          </div>
+          <div class="route-connector">
+            <div class="route-line"></div>
+            <div class="route-arrow-icon">→</div>
+            <div class="route-line"></div>
+          </div>
+          <div class="route-point">
+            <div class="route-label">Destination</div>
+            <div class="route-value">${s.destination}</div>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-item">
+            <div class="detail-label">Type</div>
+            <div class="detail-value">${typeEmoji(s.shipment_type)} ${s.shipment_type || 'Other'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Carrier</div>
+            <div class="detail-value">${s.carrier || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">ETA</div>
+            <div class="detail-value" style="color:${s.status==='Delivered'?'var(--delivered-text)':s.status==='Delayed'?'var(--delayed-text)':'var(--text)'}">${s.eta || 'TBD'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Reference #</div>
+            <div class="detail-value">${s.container_number || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Tracking #</div>
+            <div class="detail-value" style="font-size:11px">${s.tracking_number || '—'}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Last Updated</div>
+            <div class="detail-value">${s.created_at || '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-card">
+        <div class="progress-title">Shipment Progress</div>
+        ${buildProgressBar(s.status)}
+        ${s.notes ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--muted);margin-top:4px"><strong style="color:var(--text)">Notes:</strong> ${s.notes}</div>` : ''}
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action btn-copy" onclick="copyLink('${shareUrl}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy Tracking Link
+        </button>
+        <button class="btn-action btn-refresh" onclick="trackShipment()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh Status
+        </button>
+        <button class="btn-action btn-new" onclick="clearResult()">
+          Track Another
+        </button>
+      </div>`;
+  }
+
+  async function trackShipment() {
+    const input = document.getElementById('search-input');
+    const id    = input.value.trim().toUpperCase();
+    const area  = document.getElementById('result-area');
+    const btn   = document.getElementById('search-btn');
+
+    if (!id) { showError('Please enter a shipment ID.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Searching…';
+    area.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      // Public endpoint — no auth required
+      const res = await fetch(API + '/portal/shipment/' + encodeURIComponent(id));
+      if (res.status === 404) {
+        area.innerHTML = `<div class="error-card">
+          <h3>Shipment Not Found</h3>
+          <p>We couldn't find a shipment with ID <strong>${id}</strong>. Please check the ID and try again, or contact the sender.</p>
+        </div>`;
+        return;
+      }
+      if (!res.ok) throw new Error('Server error');
+      const shipment = await res.json();
+      area.innerHTML = buildResult(shipment);
+
+      // Update URL without reload
+      window.history.replaceState({}, '', '?id=' + id);
+    } catch (e) {
+      area.innerHTML = `<div class="error-card">
+        <h3>Connection Error</h3>
+        <p>Could not reach the tracking service. Please try again in a moment.</p>
+      </div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = 'Track';
+      // Reset btn text with icon
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Track';
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('result-area').innerHTML = `<div class="error-card"><h3>Invalid Input</h3><p>${msg}</p></div>`;
+  }
+
+  function clearResult() {
+    document.getElementById('result-area').innerHTML = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input').focus();
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  async function copyLink(url) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showCopyToast();
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta);
+      showCopyToast();
+    }
+  }
+
+  function showCopyToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a1e28;border:1px solid #252a38;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;color:#34d399;opacity:0;transition:all 0.3s;z-index:999;';
+    toast.textContent = '✓ Tracking link copied!';
+    document.body.appendChild(toast);
+    setTimeout(()=>{toast.style.opacity='1';toast.style.transform='translateX(-50%) translateY(0)';},10);
+    setTimeout(()=>{toast.style.opacity='0';setTimeout(()=>toast.remove(),300);},2500);
+  }
+</script>
+</body>
+</html>
