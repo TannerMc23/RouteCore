@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>RouteCore — Logistics CRM</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
   --rc-bg:#0a0c10;--rc-surface:#12151c;--rc-card:#1a1e28;--rc-border:#252a38;
   --rc-text:#e8eaf0;--rc-muted:#6b7280;--rc-accent:#3b82f6;
   --rc-pending-bg:#2d1f00;--rc-pending-text:#f59e0b;--rc-pending-border:#92400e;
@@ -25,7 +25,7 @@ body{background:var(--rc-bg);color:var(--rc-text);font-family:'Syne',sans-serif;
 .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:-0.5px;}
 .logo-icon{width:28px;height:28px;background:var(--rc-accent);border-radius:6px;display:flex;align-items:center;justify-content:center;}
 .logo-icon svg{width:16px;height:16px;stroke:white;fill:none;stroke-width:2;}
-.topbar-right{display:flex;align-items:center;gap:16px;font-size:13px;color:var(--rc-muted);}
+.topbar-right{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--rc-muted);}
 .status-dot{width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;margin-right:6px;}
 .status-dot.offline{background:#f87171;}
 .main{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 56px);}
@@ -67,14 +67,15 @@ body{background:var(--rc-bg);color:var(--rc-text);font-family:'Syne',sans-serif;
 .btn-dispatch{background:rgba(0,201,167,0.1);color:#34d399;border:1px solid #065f46;font-size:12px;padding:5px 10px;}
 .btn-dispatch:hover:not(:disabled){background:rgba(0,201,167,0.2);}
 .btn-dispatch:disabled{opacity:0.35;}
+.btn-signout{background:transparent;border:1px solid var(--rc-border);color:var(--rc-muted);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.15s;}
+.btn-signout:hover{color:#f87171;border-color:#7f1d1d;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .form-group{display:flex;flex-direction:column;gap:6px;}
 .form-group.full{grid-column:1/-1;}
 .form-label{font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;color:var(--rc-muted);}
-.form-input,.form-select,.form-textarea{background:var(--rc-surface);border:1px solid var(--rc-border);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--rc-text);font-family:'Syne',sans-serif;width:100%;outline:none;transition:border-color 0.15s;}
-.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--rc-accent);}
+.form-input,.form-select{background:var(--rc-surface);border:1px solid var(--rc-border);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--rc-text);font-family:'Syne',sans-serif;width:100%;outline:none;transition:border-color 0.15s;}
+.form-input:focus,.form-select:focus{border-color:var(--rc-accent);}
 .form-select option{background:var(--rc-surface);}
-.form-textarea{resize:vertical;min-height:72px;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
 thead th{text-align:left;padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--rc-muted);border-bottom:1px solid var(--rc-border);white-space:nowrap;}
 tbody tr{border-bottom:1px solid rgba(37,42,56,0.6);transition:background 0.12s;}
@@ -114,7 +115,6 @@ td{padding:11px 14px;vertical-align:middle;}
 .modal h3{font-size:16px;font-weight:700;margin-bottom:18px;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 .dispatch-card{background:var(--rc-surface);border:1px solid var(--rc-border);border-radius:8px;padding:16px;margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--rc-muted);}
-.dispatch-card .highlight{color:var(--rc-text);}
 .driver-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
 .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
 .bar-label{font-size:12px;color:var(--rc-muted);width:80px;flex-shrink:0;}
@@ -146,8 +146,8 @@ td{padding:11px 14px;vertical-align:middle;}
   </div>
   <div class="topbar-right">
     <span><span class="status-dot" id="status-dot"></span><span id="status-text">Connecting…</span></span>
-    <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--rc-card);border:1px solid var(--rc-border);border-radius:7px;"></div>
-    <button onclick="logout()" style="background:transparent;border:1px solid var(--rc-border);color:var(--rc-muted);padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;" onmouseover="this.style.color='#f87171';this.style.borderColor='#7f1d1d'" onmouseout="this.style.color='var(--rc-muted)';this.style.borderColor='var(--rc-border)'">Sign Out</button>
+    <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--rc-card);border:1px solid var(--rc-border);border-radius:7px;min-width:120px;"></div>
+    <button class="btn-signout" onclick="logout()">Sign Out</button>
   </div>
 </div>
 
@@ -181,7 +181,7 @@ td{padding:11px 14px;vertical-align:middle;}
 
   <div class="content">
 
-    <!-- ══ SHIPMENTS ══ -->
+    <!-- SHIPMENTS -->
     <div id="view-shipments">
       <div class="page-header">
         <div><div class="page-title">Shipment Dashboard</div><div class="page-sub">Manage and track all container shipments</div></div>
@@ -196,7 +196,6 @@ td{padding:11px 14px;vertical-align:middle;}
         <div class="stat-card"><div class="stat-label">Delivered</div><div class="stat-value" id="s-delivered" style="color:var(--rc-delivered-text)">—</div><div class="stat-sub">Completed</div></div>
         <div class="stat-card"><div class="stat-label">Delayed</div><div class="stat-value" id="s-delayed" style="color:var(--rc-delayed-text)">—</div><div class="stat-sub">Needs attention</div></div>
       </div>
-
       <div class="panel" id="add-form-panel" style="display:none">
         <div class="panel-header"><div class="panel-title">New Shipment</div><button class="btn btn-ghost" onclick="toggleForm('add-form-panel')">Cancel</button></div>
         <div class="panel-body">
@@ -220,9 +219,7 @@ td{padding:11px 14px;vertical-align:middle;}
             <div class="form-group"><label class="form-label">Container Number</label><input class="form-input" id="f-container" placeholder="e.g. MSKU-1234567"/></div>
             <div class="form-group"><label class="form-label">Tracking Number</label><input class="form-input" id="f-tracking" placeholder="e.g. 1Z999AA10123456784"/></div>
             <div class="form-group"><label class="form-label">ETA</label><input class="form-input" id="f-eta" type="date"/></div>
-            <div class="form-group"><label class="form-label">Assign Driver</label>
-              <select class="form-select" id="f-driver"><option value="">— Assign later —</option></select>
-            </div>
+            <div class="form-group"><label class="form-label">Assign Driver</label><select class="form-select" id="f-driver"><option value="">— Assign later —</option></select></div>
             <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="f-notes" placeholder="Optional notes…"/></div>
             <div class="form-group full" style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px">
               <button class="btn btn-ghost" onclick="toggleForm('add-form-panel')">Cancel</button>
@@ -231,7 +228,6 @@ td{padding:11px 14px;vertical-align:middle;}
           </div>
         </div>
       </div>
-
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title">All Shipments</div>
@@ -252,10 +248,7 @@ td{padding:11px 14px;vertical-align:middle;}
             <button class="filter-btn" onclick="setFilter('Delayed',this)">Delayed</button>
           </div>
           <table>
-            <thead><tr>
-              <th>ID</th><th>Customer</th><th>Route</th><th>Container</th>
-              <th>Carrier</th><th>Driver</th><th>ETA</th><th>Status</th><th>Actions</th>
-            </tr></thead>
+            <thead><tr><th>ID</th><th>Customer</th><th>Route</th><th>Container</th><th>Carrier</th><th>Driver</th><th>ETA</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="shipment-tbody"><tr class="loading-row"><td colspan="9">Loading shipments…</td></tr></tbody>
           </table>
           <div id="empty-state" class="empty-state" style="display:none">No shipments found.</div>
@@ -263,11 +256,11 @@ td{padding:11px 14px;vertical-align:middle;}
       </div>
     </div>
 
-    <!-- ══ DRIVERS ══ -->
+    <!-- DRIVERS -->
     <div id="view-drivers" style="display:none">
       <div class="page-header">
         <div><div class="page-title">Driver Management</div><div class="page-sub">Manage drivers and dispatch pickups</div></div>
-        <button class="btn btn-primary" onclick="toggleForm('add-driver-panel')">
+        <button class="btn btn-primary write-only" onclick="toggleForm('add-driver-panel')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Driver
         </button>
       </div>
@@ -276,7 +269,6 @@ td{padding:11px 14px;vertical-align:middle;}
         <div class="stat-card"><div class="stat-label">Available</div><div class="stat-value" id="d-available" style="color:var(--rc-delivered-text)">—</div><div class="stat-sub">Ready to dispatch</div></div>
         <div class="stat-card"><div class="stat-label">On Route</div><div class="stat-value" id="d-onroute" style="color:var(--rc-transit-text)">—</div><div class="stat-sub">Currently active</div></div>
       </div>
-
       <div class="panel" id="add-driver-panel" style="display:none">
         <div class="panel-header"><div class="panel-title">New Driver</div><button class="btn btn-ghost" onclick="toggleForm('add-driver-panel')">Cancel</button></div>
         <div class="panel-body">
@@ -294,7 +286,6 @@ td{padding:11px 14px;vertical-align:middle;}
           </div>
         </div>
       </div>
-
       <div class="panel">
         <div class="panel-header"><div class="panel-title">Driver Roster</div><span id="driver-count" style="font-size:12px;color:var(--rc-muted);"></span></div>
         <div class="panel-body" style="padding:0">
@@ -306,11 +297,11 @@ td{padding:11px 14px;vertical-align:middle;}
       </div>
     </div>
 
-    <!-- ══ CUSTOMERS ══ -->
+    <!-- CUSTOMERS -->
     <div id="view-customers" style="display:none">
       <div class="page-header">
         <div><div class="page-title">Customer Registry</div><div class="page-sub">Manage customer accounts and contacts</div></div>
-        <button class="btn btn-primary" onclick="toggleForm('add-customer-panel')">
+        <button class="btn btn-primary write-only" onclick="toggleForm('add-customer-panel')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Customer
         </button>
       </div>
@@ -340,7 +331,7 @@ td{padding:11px 14px;vertical-align:middle;}
       </div>
     </div>
 
-    <!-- ══ ANALYTICS ══ -->
+    <!-- ANALYTICS -->
     <div id="view-analytics" style="display:none">
       <div class="page-header">
         <div><div class="page-title">Analytics</div><div class="page-sub">Shipment and driver performance overview</div></div>
@@ -353,12 +344,10 @@ td{padding:11px 14px;vertical-align:middle;}
         <div class="panel"><div class="panel-header"><div class="panel-title">Status Distribution</div></div><div class="panel-body" id="analytics-dist"></div></div>
         <div class="panel"><div class="panel-header"><div class="panel-title">Top Carriers</div></div><div class="panel-body" id="analytics-carriers"></div></div>
       </div>
-      <div class="panel">
-        <div class="panel-header"><div class="panel-title">Top Routes</div></div>
-        <div class="panel-body" id="analytics-routes"></div>
-      </div>
+      <div class="panel"><div class="panel-header"><div class="panel-title">Top Routes</div></div><div class="panel-body" id="analytics-routes"></div></div>
     </div>
-     <!-- ══ TEAM ══ -->
+
+    <!-- TEAM -->
     <div id="view-team" style="display:none">
       <div class="page-header">
         <div><div class="page-title">Team Management</div><div class="page-sub">Manage user accounts and roles</div></div>
@@ -376,6 +365,7 @@ td{padding:11px 14px;vertical-align:middle;}
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -402,9 +392,7 @@ td{padding:11px 14px;vertical-align:middle;}
       <div class="form-group"><label class="form-label">Container Number</label><input class="form-input" id="e-container"/></div>
       <div class="form-group"><label class="form-label">Tracking Number</label><input class="form-input" id="e-tracking"/></div>
       <div class="form-group"><label class="form-label">ETA</label><input class="form-input" id="e-eta" type="date"/></div>
-      <div class="form-group"><label class="form-label">Assign Driver</label>
-        <select class="form-select" id="e-driver"><option value="">— No driver —</option></select>
-      </div>
+      <div class="form-group"><label class="form-label">Assign Driver</label><select class="form-select" id="e-driver"><option value="">— No driver —</option></select></div>
       <div class="form-group"><label class="form-label">Notes</label><input class="form-input" id="e-notes"/></div>
     </div>
     <div class="modal-actions">
@@ -418,13 +406,11 @@ td{padding:11px 14px;vertical-align:middle;}
 <div class="modal-bg" id="dispatch-modal-bg" onclick="if(event.target===this)closeModal('dispatch-modal-bg')">
   <div class="modal">
     <h3>📦 Dispatch Shipment</h3>
-    <p style="font-size:13px;color:var(--rc-muted);margin-bottom:16px;">Review the dispatch details below. When SMS is connected, this message will be sent directly to the driver's phone.</p>
+    <p style="font-size:13px;color:var(--rc-muted);margin-bottom:16px;">Review the dispatch details. When SMS is connected, this message will be sent to the driver's phone.</p>
     <div class="dispatch-card" id="dispatch-preview"></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('dispatch-modal-bg')">Cancel</button>
-      <button class="btn btn-dispatch" id="btn-confirm-dispatch" onclick="confirmDispatch()" style="padding:8px 16px;font-size:13px;">
-        ✓ Confirm Dispatch
-      </button>
+      <button class="btn btn-dispatch" id="btn-confirm-dispatch" onclick="confirmDispatch()" style="padding:8px 16px;font-size:13px;">✓ Confirm Dispatch</button>
     </div>
   </div>
 </div>
@@ -441,9 +427,7 @@ td{padding:11px 14px;vertical-align:middle;}
       <div class="form-group"><label class="form-label">Carrier</label><input class="form-input" id="ed-carrier"/></div>
       <div class="form-group"><label class="form-label">Status</label>
         <select class="form-select" id="ed-status">
-          <option value="Available">Available</option>
-          <option value="On Route">On Route</option>
-          <option value="Off Duty">Off Duty</option>
+          <option value="Available">Available</option><option value="On Route">On Route</option><option value="Off Duty">Off Duty</option>
         </select>
       </div>
       <div class="form-group full"><label class="form-label">Notes</label><input class="form-input" id="ed-notes"/></div>
@@ -458,11 +442,15 @@ td{padding:11px 14px;vertical-align:middle;}
 <div class="toast" id="toast"><div class="toast-dot" id="toast-dot"></div><span id="toast-msg"></span></div>
 
 <script>
-const API = 'https://routecore.onrender.com'; // ← change to your Render URL for production
+// ─── CONFIG ───────────────────────────────────────────────────
+const API = 'http://127.0.0.1:5000'; // local dev: http://127.0.0.1:5000
 
-let shipments   = [];
-let customers   = [];
-let drivers     = [];
+// ─── STATE ───────────────────────────────────────────────────
+let shipments    = [];
+let customers    = [];
+let drivers      = [];
+let teamMembers  = [];
+let currentUser  = null;
 let filterStatus = 'all';
 let searchQuery  = '';
 let editId       = null;
@@ -471,20 +459,69 @@ let dispatchId   = null;
 let searchTimer  = null;
 let toastTimer   = null;
 
-// ── API helper ──────────────────────────────────────────────
+// ─── AUTH ─────────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('rc_token'); }
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
+}
+
+async function checkAuth() {
+  const token = getToken();
+  if (!token) { window.location.href = 'login.html'; return; }
+  try {
+    const res = await fetch(API + '/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!res.ok) { localStorage.removeItem('rc_token'); window.location.href = 'login.html'; return; }
+    currentUser = await res.json();
+    applyRoleUI();
+    updateUserBadge();
+  } catch { window.location.href = 'login.html'; }
+}
+
+function applyRoleUI() {
+  if (!currentUser) return;
+  if (currentUser.role === 'Viewer') {
+    document.querySelectorAll('.write-only').forEach(el => el.style.display = 'none');
+  }
+  if (currentUser.role !== 'Admin') {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  }
+}
+
+function updateUserBadge() {
+  const badge = document.getElementById('user-badge');
+  if (!badge || !currentUser) return;
+  const colors = { Admin:'#3b82f6', Dispatcher:'#f59e0b', Viewer:'#6b7280' };
+  const c = colors[currentUser.role] || '#6b7280';
+  badge.innerHTML = `<span style="font-size:12px;color:var(--rc-muted)">${currentUser.name}</span>
+    <span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:${c}22;color:${c}">${currentUser.role}</span>`;
+}
+
+async function logout() {
+  const token = getToken();
+  if (token) {
+    try { await fetch(API + '/auth/logout', { method:'POST', headers:{ 'Authorization':'Bearer '+token } }); } catch {}
+  }
+  localStorage.removeItem('rc_token');
+  localStorage.removeItem('rc_user');
+  window.location.href = 'login.html';
+}
+
+// ─── API FETCH ────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
-  const res = await fetch(API + path, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const res = await fetch(API + path, { ...options, headers: authHeaders() });
+  if (res.status === 401) { localStorage.removeItem('rc_token'); window.location.href = 'login.html'; return; }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    throw new Error(err.error || 'HTTP ' + res.status);
   }
   return res.status === 204 ? null : res.json();
 }
 
-// ── Health ──────────────────────────────────────────────────
+// ─── HEALTH ───────────────────────────────────────────────────
 async function checkHealth() {
   try {
-    await apiFetch('/health');
+    await fetch(API + '/health');
     document.getElementById('status-dot').classList.remove('offline');
     document.getElementById('status-text').textContent = 'API Connected';
   } catch {
@@ -493,556 +530,449 @@ async function checkHealth() {
   }
 }
 
-// ── Load all data ────────────────────────────────────────────
+// ─── LOAD ALL ─────────────────────────────────────────────────
 async function loadAll() {
   await Promise.all([loadShipments(), loadDrivers(), loadCustomers()]);
 }
 
-// ── Shipments ────────────────────────────────────────────────
+// ─── SHIPMENTS ────────────────────────────────────────────────
 async function loadShipments() {
   try { shipments = await apiFetch('/shipments'); renderShipments(); updateStats(); }
   catch (e) { showToast('Failed to load shipments: ' + e.message, '#f87171'); }
 }
 
 async function createShipment() {
-  const cid       = document.getElementById('f-cid').value.trim();
-  const origin    = document.getElementById('f-origin').value.trim();
-  const dest      = document.getElementById('f-dest').value.trim();
-  const status    = document.getElementById('f-status').value;
-  const carrier   = document.getElementById('f-carrier').value;
-  const container = document.getElementById('f-container').value.trim();
-  const tracking  = document.getElementById('f-tracking').value.trim();
-  const eta       = document.getElementById('f-eta').value;
-  const driverId  = document.getElementById('f-driver').value;
-  const notes     = document.getElementById('f-notes').value.trim();
-  if (!cid || !origin || !dest) { showToast('Customer ID, origin and destination required', '#f59e0b'); return; }
-  const btn = document.getElementById('btn-create');
-  btn.disabled = true; btn.textContent = 'Creating…';
+  const cid=document.getElementById('f-cid').value.trim();
+  const origin=document.getElementById('f-origin').value.trim();
+  const dest=document.getElementById('f-dest').value.trim();
+  if (!cid||!origin||!dest) { showToast('Customer ID, origin and destination required','#f59e0b'); return; }
+  const btn=document.getElementById('btn-create');
+  btn.disabled=true; btn.textContent='Creating…';
   try {
-    const s = await apiFetch('/shipments', { method: 'POST', body: JSON.stringify({
-      customer_id: cid, origin, destination: dest, status, carrier,
-      container_number: container, tracking_number: tracking, eta, notes, driver_id: driverId
+    const s = await apiFetch('/shipments', { method:'POST', body:JSON.stringify({
+      customer_id:cid, origin, destination:dest,
+      status:document.getElementById('f-status').value,
+      carrier:document.getElementById('f-carrier').value,
+      container_number:document.getElementById('f-container').value.trim(),
+      tracking_number:document.getElementById('f-tracking').value.trim(),
+      eta:document.getElementById('f-eta').value,
+      driver_id:document.getElementById('f-driver').value,
+      notes:document.getElementById('f-notes').value.trim(),
     })});
     shipments.unshift(s);
-    ['f-cid','f-origin','f-dest','f-tracking','f-container','f-notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('f-eta').value = '';
-    document.getElementById('f-driver').value = '';
-    toggleForm('add-form-panel');
-    renderShipments(); updateStats();
-    showToast('Shipment ' + s.id + ' created', '#34d399');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Create Shipment'; }
+    ['f-cid','f-origin','f-dest','f-tracking','f-container','f-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-eta').value='';
+    document.getElementById('f-driver').value='';
+    toggleForm('add-form-panel'); renderShipments(); updateStats();
+    showToast('Shipment '+s.id+' created','#34d399');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='Create Shipment'; }
 }
 
 async function deleteShipment(id) {
   try {
-    await apiFetch('/shipments/' + id, { method: 'DELETE' });
-    shipments = shipments.filter(s => s.id !== id);
+    await apiFetch('/shipments/'+id, {method:'DELETE'});
+    shipments=shipments.filter(s=>s.id!==id);
     renderShipments(); updateStats();
-    showToast('Shipment ' + id + ' deleted', '#f87171');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    showToast('Shipment '+id+' deleted','#f87171');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
 }
 
 async function saveEdit() {
-  const btn = document.getElementById('btn-save-edit');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  const btn=document.getElementById('btn-save-edit');
+  btn.disabled=true; btn.textContent='Saving…';
   try {
-    const updated = await apiFetch('/shipments/' + editId, { method: 'PUT', body: JSON.stringify({
-      customer_id: document.getElementById('e-cid').value.trim(),
-      origin:      document.getElementById('e-origin').value.trim(),
-      destination: document.getElementById('e-dest').value.trim(),
-      status:      document.getElementById('e-status').value,
-      carrier:     document.getElementById('e-carrier').value,
-      container_number: document.getElementById('e-container').value.trim(),
-      tracking_number:  document.getElementById('e-tracking').value.trim(),
-      eta:         document.getElementById('e-eta').value,
-      driver_id:   document.getElementById('e-driver').value,
-      notes:       document.getElementById('e-notes').value.trim(),
+    const updated=await apiFetch('/shipments/'+editId, {method:'PUT', body:JSON.stringify({
+      customer_id:document.getElementById('e-cid').value.trim(),
+      origin:document.getElementById('e-origin').value.trim(),
+      destination:document.getElementById('e-dest').value.trim(),
+      status:document.getElementById('e-status').value,
+      carrier:document.getElementById('e-carrier').value,
+      container_number:document.getElementById('e-container').value.trim(),
+      tracking_number:document.getElementById('e-tracking').value.trim(),
+      eta:document.getElementById('e-eta').value,
+      driver_id:document.getElementById('e-driver').value,
+      notes:document.getElementById('e-notes').value.trim(),
     })});
-    const idx = shipments.findIndex(s => s.id === editId);
-    if (idx !== -1) shipments[idx] = updated;
-    closeModal('edit-modal-bg');
-    renderShipments(); updateStats();
-    showToast('Shipment ' + editId + ' updated', '#60a5fa');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+    const idx=shipments.findIndex(s=>s.id===editId);
+    if(idx!==-1) shipments[idx]=updated;
+    closeModal('edit-modal-bg'); renderShipments(); updateStats();
+    showToast('Shipment '+editId+' updated','#60a5fa');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='Save Changes'; }
 }
 
-// ── Dispatch ─────────────────────────────────────────────────
 function openDispatch(id) {
-  const s = shipments.find(x => x.id === id);
-  if (!s.driver_id) { showToast('Assign a driver first before dispatching', '#f59e0b'); return; }
-  const driver = drivers.find(d => d.id === s.driver_id);
-  dispatchId = id;
-  const msg = [
-    'RouteCore Dispatch — New Pickup',
-    '',
-    'Driver:     ' + (driver ? driver.name : s.driver_id),
-    'Phone:      ' + (driver ? driver.phone : '—'),
-    'Shipment:   ' + s.id,
-    'Container:  ' + (s.container_number || 'N/A'),
-    'Pickup:     ' + s.origin,
-    'Deliver to: ' + s.destination,
-    'ETA:        ' + (s.eta || 'TBD'),
-    'Carrier:    ' + (s.carrier || 'N/A'),
-    'Tracking:   ' + (s.tracking_number || 'N/A'),
-    'Notes:      ' + (s.notes || 'None'),
+  const s=shipments.find(x=>x.id===id);
+  if(!s.driver_id) { showToast('Assign a driver first','#f59e0b'); return; }
+  const driver=drivers.find(d=>d.id===s.driver_id);
+  dispatchId=id;
+  document.getElementById('dispatch-preview').textContent=[
+    'RouteCore Dispatch — New Pickup','',
+    'Driver:     '+(driver?driver.name:s.driver_id),
+    'Phone:      '+(driver?driver.phone:'—'),
+    'Shipment:   '+s.id,
+    'Container:  '+(s.container_number||'N/A'),
+    'Pickup:     '+s.origin,
+    'Deliver to: '+s.destination,
+    'ETA:        '+(s.eta||'TBD'),
+    'Carrier:    '+(s.carrier||'N/A'),
+    'Tracking:   '+(s.tracking_number||'N/A'),
+    'Notes:      '+(s.notes||'None'),
   ].join('\n');
-  document.getElementById('dispatch-preview').textContent = msg;
-  document.getElementById('edit-modal-bg').classList.remove('open');
   document.getElementById('dispatch-modal-bg').classList.add('open');
 }
 
 async function confirmDispatch() {
-  const btn = document.getElementById('btn-confirm-dispatch');
-  btn.disabled = true; btn.textContent = 'Dispatching…';
+  const btn=document.getElementById('btn-confirm-dispatch');
+  btn.disabled=true; btn.textContent='Dispatching…';
   try {
-    const result = await apiFetch('/shipments/' + dispatchId + '/dispatch', { method: 'POST' });
-    const idx = shipments.findIndex(s => s.id === dispatchId);
-    if (idx !== -1) shipments[idx] = result.shipment;
-    await loadDrivers();
-    closeModal('dispatch-modal-bg');
+    const result=await apiFetch('/shipments/'+dispatchId+'/dispatch',{method:'POST'});
+    const idx=shipments.findIndex(s=>s.id===dispatchId);
+    if(idx!==-1) shipments[idx]=result.shipment;
+    await loadDrivers(); closeModal('dispatch-modal-bg');
     renderShipments(); updateStats();
-    showToast('Driver dispatched for ' + dispatchId + ' — SMS ready to connect', '#34d399');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = '✓ Confirm Dispatch'; }
+    showToast('Driver dispatched for '+dispatchId,'#34d399');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='✓ Confirm Dispatch'; }
 }
 
-// ── Search ────────────────────────────────────────────────────
 function onSearch(val) {
-  searchQuery = val.trim();
-  clearTimeout(searchTimer);
-  if (!searchQuery) { renderShipments(); return; }
-  searchTimer = setTimeout(async () => {
+  searchQuery=val.trim(); clearTimeout(searchTimer);
+  if(!searchQuery) { renderShipments(); return; }
+  searchTimer=setTimeout(async()=>{
     try {
-      const results = await apiFetch('/shipments/search?q=' + encodeURIComponent(searchQuery));
+      const results=await apiFetch('/shipments/search?q='+encodeURIComponent(searchQuery));
       renderTable(results);
-      document.getElementById('record-count').textContent = results.length + ' result' + (results.length !== 1 ? 's' : '');
-    } catch (e) { showToast('Search error: ' + e.message, '#f87171'); }
-  }, 300);
+      document.getElementById('record-count').textContent=results.length+' result'+(results.length!==1?'s':'');
+    } catch(e) { showToast('Search error: '+e.message,'#f87171'); }
+  },300);
 }
 
-// ── Drivers ──────────────────────────────────────────────────
+// ─── DRIVERS ──────────────────────────────────────────────────
 async function loadDrivers() {
-  try {
-    drivers = await apiFetch('/drivers');
-    renderDrivers();
-    updateDriverStats();
-    populateDriverDropdowns();
-  } catch (e) { showToast('Failed to load drivers: ' + e.message, '#f87171'); }
+  try { drivers=await apiFetch('/drivers'); renderDrivers(); updateDriverStats(); populateDriverDropdowns(); }
+  catch(e) { showToast('Failed to load drivers: '+e.message,'#f87171'); }
 }
 
 async function createDriver() {
-  const name    = document.getElementById('d-name').value.trim();
-  const phone   = document.getElementById('d-phone').value.trim();
-  if (!name || !phone) { showToast('Name and phone are required', '#f59e0b'); return; }
-  const btn = document.getElementById('btn-add-driver');
-  btn.disabled = true; btn.textContent = 'Adding…';
+  const name=document.getElementById('d-name').value.trim();
+  const phone=document.getElementById('d-phone').value.trim();
+  if(!name||!phone) { showToast('Name and phone required','#f59e0b'); return; }
+  const btn=document.getElementById('btn-add-driver');
+  btn.disabled=true; btn.textContent='Adding…';
   try {
-    const d = await apiFetch('/drivers', { method: 'POST', body: JSON.stringify({
-      name, phone,
-      email:   document.getElementById('d-email').value.trim(),
-      license: document.getElementById('d-license').value.trim(),
-      carrier: document.getElementById('d-carrier').value.trim(),
-      notes:   document.getElementById('d-notes').value.trim(),
+    const d=await apiFetch('/drivers',{method:'POST',body:JSON.stringify({
+      name,phone,
+      email:document.getElementById('d-email').value.trim(),
+      license:document.getElementById('d-license').value.trim(),
+      carrier:document.getElementById('d-carrier').value.trim(),
+      notes:document.getElementById('d-notes').value.trim(),
     })});
     drivers.push(d);
-    ['d-name','d-phone','d-email','d-license','d-carrier','d-notes'].forEach(id => document.getElementById(id).value = '');
-    toggleForm('add-driver-panel');
-    renderDrivers(); updateDriverStats(); populateDriverDropdowns();
-    showToast('Driver ' + d.name + ' added', '#34d399');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Add Driver'; }
+    ['d-name','d-phone','d-email','d-license','d-carrier','d-notes'].forEach(id=>document.getElementById(id).value='');
+    toggleForm('add-driver-panel'); renderDrivers(); updateDriverStats(); populateDriverDropdowns();
+    showToast('Driver '+d.name+' added','#34d399');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='Add Driver'; }
 }
 
 async function deleteDriver(id) {
   try {
-    await apiFetch('/drivers/' + id, { method: 'DELETE' });
-    drivers = drivers.filter(d => d.id !== id);
+    await apiFetch('/drivers/'+id,{method:'DELETE'});
+    drivers=drivers.filter(d=>d.id!==id);
     renderDrivers(); updateDriverStats(); populateDriverDropdowns();
-    showToast('Driver removed', '#f87171');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    showToast('Driver removed','#f87171');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
 }
 
 function openEditDriver(id) {
-  const d = drivers.find(x => x.id === id);
-  editDriverId = id;
-  document.getElementById('ed-name').value    = d.name;
-  document.getElementById('ed-phone').value   = d.phone;
-  document.getElementById('ed-email').value   = d.email || '';
-  document.getElementById('ed-license').value = d.license || '';
-  document.getElementById('ed-carrier').value = d.carrier || '';
-  document.getElementById('ed-status').value  = d.status;
-  document.getElementById('ed-notes').value   = d.notes || '';
+  const d=drivers.find(x=>x.id===id); editDriverId=id;
+  document.getElementById('ed-name').value=d.name;
+  document.getElementById('ed-phone').value=d.phone;
+  document.getElementById('ed-email').value=d.email||'';
+  document.getElementById('ed-license').value=d.license||'';
+  document.getElementById('ed-carrier').value=d.carrier||'';
+  document.getElementById('ed-status').value=d.status;
+  document.getElementById('ed-notes').value=d.notes||'';
   document.getElementById('edit-driver-modal-bg').classList.add('open');
 }
 
 async function saveDriverEdit() {
-  const btn = document.getElementById('btn-save-driver');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  const btn=document.getElementById('btn-save-driver');
+  btn.disabled=true; btn.textContent='Saving…';
   try {
-    const updated = await apiFetch('/drivers/' + editDriverId, { method: 'PUT', body: JSON.stringify({
-      name:    document.getElementById('ed-name').value.trim(),
-      phone:   document.getElementById('ed-phone').value.trim(),
-      email:   document.getElementById('ed-email').value.trim(),
-      license: document.getElementById('ed-license').value.trim(),
-      carrier: document.getElementById('ed-carrier').value.trim(),
-      status:  document.getElementById('ed-status').value,
-      notes:   document.getElementById('ed-notes').value.trim(),
+    const updated=await apiFetch('/drivers/'+editDriverId,{method:'PUT',body:JSON.stringify({
+      name:document.getElementById('ed-name').value.trim(),
+      phone:document.getElementById('ed-phone').value.trim(),
+      email:document.getElementById('ed-email').value.trim(),
+      license:document.getElementById('ed-license').value.trim(),
+      carrier:document.getElementById('ed-carrier').value.trim(),
+      status:document.getElementById('ed-status').value,
+      notes:document.getElementById('ed-notes').value.trim(),
     })});
-    const idx = drivers.findIndex(d => d.id === editDriverId);
-    if (idx !== -1) drivers[idx] = updated;
-    closeModal('edit-driver-modal-bg');
-    renderDrivers(); updateDriverStats(); populateDriverDropdowns();
-    showToast('Driver updated', '#60a5fa');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+    const idx=drivers.findIndex(d=>d.id===editDriverId);
+    if(idx!==-1) drivers[idx]=updated;
+    closeModal('edit-driver-modal-bg'); renderDrivers(); updateDriverStats(); populateDriverDropdowns();
+    showToast('Driver updated','#60a5fa');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='Save Changes'; }
 }
 
-// ── Customers ─────────────────────────────────────────────────
+// ─── CUSTOMERS ────────────────────────────────────────────────
 async function loadCustomers() {
-  try { customers = await apiFetch('/customers'); renderCustomers(); }
-  catch (e) { showToast('Failed to load customers: ' + e.message, '#f87171'); }
+  try { customers=await apiFetch('/customers'); renderCustomers(); }
+  catch(e) { showToast('Failed to load customers: '+e.message,'#f87171'); }
 }
 
 async function createCustomer() {
-  const name  = document.getElementById('c-name').value.trim();
-  const email = document.getElementById('c-email').value.trim();
-  if (!name || !email) { showToast('Name and email required', '#f59e0b'); return; }
-  const btn = document.getElementById('btn-add-customer');
-  btn.disabled = true; btn.textContent = 'Adding…';
+  const name=document.getElementById('c-name').value.trim();
+  const email=document.getElementById('c-email').value.trim();
+  if(!name||!email) { showToast('Name and email required','#f59e0b'); return; }
+  const btn=document.getElementById('btn-add-customer');
+  btn.disabled=true; btn.textContent='Adding…';
   try {
-    const c = await apiFetch('/customers', { method: 'POST', body: JSON.stringify({
-      name, email,
-      phone: document.getElementById('c-phone').value.trim(),
-      notes: document.getElementById('c-notes').value.trim(),
+    const c=await apiFetch('/customers',{method:'POST',body:JSON.stringify({
+      name,email,
+      phone:document.getElementById('c-phone').value.trim(),
+      notes:document.getElementById('c-notes').value.trim(),
     })});
     customers.push(c);
-    ['c-name','c-email','c-phone','c-notes'].forEach(id => document.getElementById(id).value = '');
+    ['c-name','c-email','c-phone','c-notes'].forEach(id=>document.getElementById(id).value='');
     toggleForm('add-customer-panel'); renderCustomers();
-    showToast('Customer ' + c.name + ' added', '#34d399');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Add Customer'; }
+    showToast('Customer '+c.name+' added','#34d399');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+  finally { btn.disabled=false; btn.textContent='Add Customer'; }
 }
 
 async function deleteCustomer(id) {
   try {
-    await apiFetch('/customers/' + id, { method: 'DELETE' });
-    customers = customers.filter(c => c.id !== id);
-    renderCustomers();
-    showToast('Customer removed', '#f87171');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+    await apiFetch('/customers/'+id,{method:'DELETE'});
+    customers=customers.filter(c=>c.id!==id);
+    renderCustomers(); showToast('Customer removed','#f87171');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
 }
 
-// ── Render helpers ────────────────────────────────────────────
+// ─── TEAM ─────────────────────────────────────────────────────
+async function loadTeam() {
+  try { teamMembers=await apiFetch('/auth/users'); renderTeam(); }
+  catch(e) { showToast('Failed to load team: '+e.message,'#f87171'); }
+}
+
+function renderTeam() {
+  const tbody=document.getElementById('team-tbody');
+  const tc=document.getElementById('team-count');
+  if(tc) tc.textContent=teamMembers.length+' member'+(teamMembers.length!==1?'s':'');
+  if(!teamMembers.length) { tbody.innerHTML='<tr class="loading-row"><td colspan="6">No team members yet.</td></tr>'; return; }
+  const roleClass=r=>{ const m={Admin:'badge-transit',Dispatcher:'badge-pending',Viewer:'badge-cancelled'}; return 'badge '+(m[r]||'badge-cancelled'); };
+  tbody.innerHTML=teamMembers.map(u=>`
+    <tr>
+      <td class="id-cell">${u.id}</td>
+      <td style="font-weight:600">${u.name}${u.id===currentUser?.id?' <span style="font-size:10px;color:var(--rc-muted)">(you)</span>':''}</td>
+      <td style="font-size:12px;color:var(--rc-muted)">${u.email}</td>
+      <td><span class="${roleClass(u.role)}">${u.role}</span></td>
+      <td class="id-cell">${u.created_at}</td>
+      <td>${u.id!==currentUser?.id?`<button class="btn btn-danger" onclick="deleteTeamMember('${u.id}','${u.name}')">Remove</button>`:'<span style="color:var(--rc-muted);font-size:12px">—</span>'}</td>
+    </tr>`).join('');
+}
+
+async function deleteTeamMember(id,name) {
+  if(!confirm('Remove '+name+' from the team?')) return;
+  try {
+    await apiFetch('/auth/users/'+id,{method:'DELETE'});
+    teamMembers=teamMembers.filter(u=>u.id!==id);
+    renderTeam(); showToast(name+' removed','#f87171');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+}
+
+// ─── RENDER HELPERS ───────────────────────────────────────────
 function badgeClass(s) {
-  const map = {'Pending':'badge-pending','In Transit':'badge-transit','Delivered':'badge-delivered','Delayed':'badge-delayed','Cancelled':'badge-cancelled'};
-  return 'badge ' + (map[s] || 'badge-pending');
+  const m={'Pending':'badge-pending','In Transit':'badge-transit','Delivered':'badge-delivered','Delayed':'badge-delayed','Cancelled':'badge-cancelled'};
+  return 'badge '+(m[s]||'badge-pending');
 }
-
 function driverBadgeClass(s) {
-  const map = {'Available':'badge-available','On Route':'badge-onroute','Off Duty':'badge-offduty'};
-  return 'badge ' + (map[s] || 'badge-offduty');
+  const m={'Available':'badge-available','On Route':'badge-onroute','Off Duty':'badge-offduty'};
+  return 'badge '+(m[s]||'badge-offduty');
 }
-
 function driverName(id) {
-  if (!id) return '<span style="color:var(--rc-muted)">—</span>';
-  const d = drivers.find(x => x.id === id);
-  return d ? d.name : id;
+  if(!id) return '<span style="color:var(--rc-muted)">—</span>';
+  const d=drivers.find(x=>x.id===id);
+  return d?d.name:id;
 }
 
 function renderShipments() {
-  if (searchQuery) return;
-  const list = filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
-  renderTable(list);
+  if(searchQuery) return;
+  renderTable(filterStatus==='all'?shipments:shipments.filter(s=>s.status===filterStatus));
 }
 
 function renderTable(list) {
-  const tbody = document.getElementById('shipment-tbody');
-  const empty = document.getElementById('empty-state');
-  document.getElementById('record-count').textContent = list.length + ' record' + (list.length !== 1 ? 's' : '');
-  if (!list.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-  tbody.innerHTML = list.map(s => {
-    const dispatched = s.dispatch_sent == 1;
-    const hasDriver  = !!s.driver_id;
+  const tbody=document.getElementById('shipment-tbody');
+  const empty=document.getElementById('empty-state');
+  document.getElementById('record-count').textContent=list.length+' record'+(list.length!==1?'s':'');
+  if(!list.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML=list.map(s=>{
+    const dispatched=s.dispatch_sent==1;
+    const hasDriver=!!s.driver_id;
     return `<tr>
       <td class="id-cell">${s.id}</td>
       <td style="font-size:12px;color:var(--rc-muted)">${s.customer_id}</td>
       <td><div class="route-cell">${s.origin} <span class="route-arrow">→</span> ${s.destination}</div></td>
-      <td class="id-cell">${s.container_number || '<span style="color:var(--rc-muted)">—</span>'}</td>
-      <td style="font-size:12px;font-weight:600">${s.carrier || '<span style="color:var(--rc-muted)">—</span>'}</td>
+      <td class="id-cell">${s.container_number||'<span style="color:var(--rc-muted)">—</span>'}</td>
+      <td style="font-size:12px;font-weight:600">${s.carrier||'<span style="color:var(--rc-muted)">—</span>'}</td>
       <td style="font-size:12px">${driverName(s.driver_id)}</td>
-      <td class="id-cell">${s.eta || '<span style="color:var(--rc-muted)">—</span>'}</td>
+      <td class="id-cell">${s.eta||'<span style="color:var(--rc-muted)">—</span>'}</td>
       <td><span class="${badgeClass(s.status)}">${s.status}</span></td>
       <td><div class="actions">
         <button class="btn btn-edit" onclick="openEdit('${s.id}')">Edit</button>
-        <button class="btn btn-dispatch" onclick="openDispatch('${s.id}')" ${dispatched ? 'title="Already dispatched"' : ''} ${!hasDriver ? 'disabled title="Assign a driver first"' : ''}>
-          ${dispatched ? '✓ Dispatched' : '📦 Dispatch'}
+        <button class="btn btn-dispatch" onclick="openDispatch('${s.id}')" ${!hasDriver?'disabled title="Assign a driver first"':''}>
+          ${dispatched?'✓ Dispatched':'📦 Dispatch'}
         </button>
-        <button class="btn btn-danger" onclick="deleteShipment('${s.id}')">Delete</button>
+        <button class="btn btn-danger write-only" onclick="deleteShipment('${s.id}')">Delete</button>
       </div></td>
     </tr>`;
   }).join('');
 }
 
 function updateStats() {
-  const count = s => shipments.filter(x => x.status === s).length;
-  document.getElementById('s-total').textContent     = shipments.length;
-  document.getElementById('s-pending').textContent   = count('Pending');
-  document.getElementById('s-transit').textContent   = count('In Transit');
-  document.getElementById('s-delivered').textContent = count('Delivered');
-  document.getElementById('s-delayed').textContent   = count('Delayed');
+  const c=s=>shipments.filter(x=>x.status===s).length;
+  document.getElementById('s-total').textContent=shipments.length;
+  document.getElementById('s-pending').textContent=c('Pending');
+  document.getElementById('s-transit').textContent=c('In Transit');
+  document.getElementById('s-delivered').textContent=c('Delivered');
+  document.getElementById('s-delayed').textContent=c('Delayed');
 }
 
 function updateDriverStats() {
-  document.getElementById('d-total').textContent     = drivers.length;
-  document.getElementById('d-available').textContent = drivers.filter(d => d.status === 'Available').length;
-  document.getElementById('d-onroute').textContent   = drivers.filter(d => d.status === 'On Route').length;
+  document.getElementById('d-total').textContent=drivers.length;
+  document.getElementById('d-available').textContent=drivers.filter(d=>d.status==='Available').length;
+  document.getElementById('d-onroute').textContent=drivers.filter(d=>d.status==='On Route').length;
 }
 
 function renderDrivers() {
-  const tbody = document.getElementById('driver-tbody');
-  document.getElementById('driver-count').textContent = drivers.length + ' driver' + (drivers.length !== 1 ? 's' : '');
-  if (!drivers.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="7">No drivers yet. Add your first driver above.</td></tr>'; return; }
-  tbody.innerHTML = drivers.map(d => `
+  const tbody=document.getElementById('driver-tbody');
+  document.getElementById('driver-count').textContent=drivers.length+' driver'+(drivers.length!==1?'s':'');
+  if(!drivers.length) { tbody.innerHTML='<tr class="loading-row"><td colspan="7">No drivers yet.</td></tr>'; return; }
+  tbody.innerHTML=drivers.map(d=>`
     <tr>
       <td class="id-cell">${d.id}</td>
       <td style="font-weight:600">${d.name}</td>
       <td class="id-cell">${d.phone}</td>
-      <td class="id-cell">${d.license || '—'}</td>
-      <td style="font-size:12px">${d.carrier || '—'}</td>
+      <td class="id-cell">${d.license||'—'}</td>
+      <td style="font-size:12px">${d.carrier||'—'}</td>
       <td><span class="${driverBadgeClass(d.status)}">${d.status}</span></td>
       <td><div class="actions">
         <button class="btn btn-edit" onclick="openEditDriver('${d.id}')">Edit</button>
-        <button class="btn btn-danger" onclick="deleteDriver('${d.id}')">Delete</button>
+        <button class="btn btn-danger write-only" onclick="deleteDriver('${d.id}')">Delete</button>
       </div></td>
     </tr>`).join('');
 }
 
 function renderCustomers() {
-  const tbody = document.getElementById('customer-tbody');
-  document.getElementById('cust-count').textContent = customers.length + ' record' + (customers.length !== 1 ? 's' : '');
-  if (!customers.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No customers yet.</td></tr>'; return; }
-  tbody.innerHTML = customers.map(c => `
+  const tbody=document.getElementById('customer-tbody');
+  document.getElementById('cust-count').textContent=customers.length+' record'+(customers.length!==1?'s':'');
+  if(!customers.length) { tbody.innerHTML='<tr class="loading-row"><td colspan="6">No customers yet.</td></tr>'; return; }
+  tbody.innerHTML=customers.map(c=>`
     <tr>
       <td class="id-cell">${c.id}</td>
       <td style="font-weight:500">${c.name}</td>
       <td style="font-size:12px;color:var(--rc-muted)">${c.email}</td>
-      <td class="id-cell">${c.phone || '—'}</td>
-      <td style="font-size:12px;color:var(--rc-muted)">${c.notes || '—'}</td>
-      <td><button class="btn btn-danger" onclick="deleteCustomer('${c.id}')">Delete</button></td>
+      <td class="id-cell">${c.phone||'—'}</td>
+      <td style="font-size:12px;color:var(--rc-muted)">${c.notes||'—'}</td>
+      <td><button class="btn btn-danger write-only" onclick="deleteCustomer('${c.id}')">Delete</button></td>
     </tr>`).join('');
 }
 
 function populateDriverDropdowns() {
-  const opts = '<option value="">— No driver —</option>' +
-    drivers.map(d => `<option value="${d.id}">${d.name} (${d.status})</option>`).join('');
-  ['f-driver','e-driver'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = opts;
-  });
+  const opts='<option value="">— No driver —</option>'+
+    drivers.map(d=>`<option value="${d.id}">${d.name} (${d.status})</option>`).join('');
+  ['f-driver','e-driver'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
 }
 
 function renderAnalytics() {
-  const total     = shipments.length;
-  const pending   = shipments.filter(s => s.status === 'Pending').length;
-  const transit   = shipments.filter(s => s.status === 'In Transit').length;
-  const delivered = shipments.filter(s => s.status === 'Delivered').length;
-  const delayed   = shipments.filter(s => s.status === 'Delayed').length;
-  const rate      = total ? Math.round((delivered / total) * 100) : 0;
-  document.getElementById('analytics-stats').innerHTML = `
+  const total=shipments.length;
+  const pending=shipments.filter(s=>s.status==='Pending').length;
+  const transit=shipments.filter(s=>s.status==='In Transit').length;
+  const delivered=shipments.filter(s=>s.status==='Delivered').length;
+  const delayed=shipments.filter(s=>s.status==='Delayed').length;
+  const rate=total?Math.round((delivered/total)*100):0;
+  document.getElementById('analytics-stats').innerHTML=`
     <div class="stat-card"><div class="stat-label">Total Shipments</div><div class="stat-value">${total}</div><div class="stat-sub">All time</div></div>
     <div class="stat-card"><div class="stat-label">Delivery Rate</div><div class="stat-value" style="color:var(--rc-delivered-text)">${rate}%</div><div class="stat-sub">Completed</div></div>
     <div class="stat-card"><div class="stat-label">Customers</div><div class="stat-value" style="color:var(--rc-transit-text)">${customers.length}</div><div class="stat-sub">Registered</div></div>
     <div class="stat-card"><div class="stat-label">Active Drivers</div><div class="stat-value" style="color:var(--rc-pending-text)">${drivers.filter(d=>d.status!=='Off Duty').length}</div><div class="stat-sub">Available + On Route</div></div>`;
-  const maxCount = Math.max(pending, transit, delivered, delayed, 1);
-  const bar = (label, count, color) => `
-    <div class="bar-row">
-      <span class="bar-label">${label}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.round((count/maxCount)*100)}%;background:${color}"></div></div>
-      <span class="bar-count">${count}</span>
-    </div>`;
-  document.getElementById('analytics-dist').innerHTML =
-    bar('Pending',   pending,   'var(--rc-pending-text)') +
-    bar('In Transit',transit,   'var(--rc-transit-text)') +
-    bar('Delivered', delivered, 'var(--rc-delivered-text)') +
-    bar('Delayed',   delayed,   'var(--rc-delayed-text)');
-  const carrierMap = {};
-  shipments.forEach(s => { if (s.carrier) carrierMap[s.carrier] = (carrierMap[s.carrier]||0)+1; });
-  const topCarriers = Object.entries(carrierMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('analytics-carriers').innerHTML = topCarriers.length
-    ? topCarriers.map(([c,n]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)"><span style="font-size:13px;font-weight:600">${c}</span><span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span></div>`).join('')
-    : '<div style="color:var(--rc-muted);font-size:13px">No carrier data yet.</div>';
-  const routeMap = {};
-  shipments.forEach(s => { const k = s.origin.split(',')[0]+' → '+s.destination.split(',')[0]; routeMap[k]=(routeMap[k]||0)+1; });
-  const topRoutes = Object.entries(routeMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('analytics-routes').innerHTML = topRoutes.length
-    ? topRoutes.map(([r,n]) => `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)"><span style="font-size:13px">${r}</span><span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span></div>`).join('')
-    : '<div style="color:var(--rc-muted);font-size:13px">No route data yet.</div>';
+  const max=Math.max(pending,transit,delivered,delayed,1);
+  const bar=(label,count,color)=>`<div class="bar-row"><span class="bar-label">${label}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round((count/max)*100)}%;background:${color}"></div></div><span class="bar-count">${count}</span></div>`;
+  document.getElementById('analytics-dist').innerHTML=
+    bar('Pending',pending,'var(--rc-pending-text)')+
+    bar('In Transit',transit,'var(--rc-transit-text)')+
+    bar('Delivered',delivered,'var(--rc-delivered-text)')+
+    bar('Delayed',delayed,'var(--rc-delayed-text)');
+  const cm={};shipments.forEach(s=>{if(s.carrier)cm[s.carrier]=(cm[s.carrier]||0)+1;});
+  document.getElementById('analytics-carriers').innerHTML=Object.entries(cm).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([c,n])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)"><span style="font-size:13px;font-weight:600">${c}</span><span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span></div>`).join('')||'<div style="color:var(--rc-muted);font-size:13px">No carrier data yet.</div>';
+  const rm={};shipments.forEach(s=>{const k=s.origin.split(',')[0]+' → '+s.destination.split(',')[0];rm[k]=(rm[k]||0)+1;});
+  document.getElementById('analytics-routes').innerHTML=Object.entries(rm).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([r,n])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--rc-border)"><span style="font-size:13px">${r}</span><span style="font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--rc-accent)">${n}</span></div>`).join('')||'<div style="color:var(--rc-muted);font-size:13px">No route data yet.</div>';
 }
 
-// ── UI helpers ────────────────────────────────────────────────
+// ─── UI HELPERS ───────────────────────────────────────────────
 function setView(v) {
-  ['shipments','drivers','customers','analytics','team'].forEach(n => {
-    const el = document.getElementById('view-' + n);
-    if (el) el.style.display = n === v ? 'block' : 'none';
-    const nav = document.getElementById('nav-' + n);
-    if (nav) nav.classList.toggle('active', n === v);
+  ['shipments','drivers','customers','analytics','team'].forEach(n=>{
+    const el=document.getElementById('view-'+n);
+    if(el) el.style.display=n===v?'block':'none';
+    const nav=document.getElementById('nav-'+n);
+    if(nav) nav.classList.toggle('active',n===v);
   });
-  if (v === 'analytics') renderAnalytics();
-  if (v === 'team') loadTeam();
+  if(v==='analytics') renderAnalytics();
+  if(v==='team') loadTeam();
 }
 
-function setFilter(f, btn) {
-  filterStatus = f; searchQuery = '';
-  document.getElementById('search-input').value = '';
-  document.querySelectorAll('.filter-btn').forEach(b => b.className = 'filter-btn');
-  const map = {all:'f-all',Pending:'f-pending','In Transit':'f-transit',Delivered:'f-delivered',Delayed:'f-delayed'};
-  btn.classList.add(map[f]||'f-all');
+function setFilter(f,btn) {
+  filterStatus=f; searchQuery='';
+  document.getElementById('search-input').value='';
+  document.querySelectorAll('.filter-btn').forEach(b=>b.className='filter-btn');
+  const m={all:'f-all',Pending:'f-pending','In Transit':'f-transit',Delivered:'f-delivered',Delayed:'f-delayed'};
+  btn.classList.add(m[f]||'f-all');
   renderShipments();
 }
 
 function toggleForm(id) {
-  const p = document.getElementById(id);
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  const p=document.getElementById(id);
+  p.style.display=p.style.display==='none'?'block':'none';
 }
 
 function openEdit(id) {
-  const s = shipments.find(x => x.id === id);
-  editId = id;
-  document.getElementById('e-cid').value       = s.customer_id;
-  document.getElementById('e-origin').value    = s.origin;
-  document.getElementById('e-dest').value      = s.destination;
-  document.getElementById('e-status').value    = s.status;
-  document.getElementById('e-carrier').value   = s.carrier || '';
-  document.getElementById('e-container').value = s.container_number || '';
-  document.getElementById('e-tracking').value  = s.tracking_number || '';
-  document.getElementById('e-eta').value       = s.eta || '';
-  document.getElementById('e-driver').value    = s.driver_id || '';
-  document.getElementById('e-notes').value     = s.notes || '';
+  const s=shipments.find(x=>x.id===id); editId=id;
+  document.getElementById('e-cid').value=s.customer_id;
+  document.getElementById('e-origin').value=s.origin;
+  document.getElementById('e-dest').value=s.destination;
+  document.getElementById('e-status').value=s.status;
+  document.getElementById('e-carrier').value=s.carrier||'';
+  document.getElementById('e-container').value=s.container_number||'';
+  document.getElementById('e-tracking').value=s.tracking_number||'';
+  document.getElementById('e-eta').value=s.eta||'';
+  document.getElementById('e-driver').value=s.driver_id||'';
+  document.getElementById('e-notes').value=s.notes||'';
   document.getElementById('edit-modal-bg').classList.add('open');
 }
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
-  editId = null; editDriverId = null; dispatchId = null;
+  editId=null; editDriverId=null; dispatchId=null;
 }
 
-function showToast(msg, color) {
-  document.getElementById('toast-msg').textContent = msg;
-  document.getElementById('toast-dot').style.background = color;
-  const t = document.getElementById('toast');
+function showToast(msg,color) {
+  document.getElementById('toast-msg').textContent=msg;
+  document.getElementById('toast-dot').style.background=color;
+  const t=document.getElementById('toast');
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
 
-// ── Auth ──────────────────────────────────────────────────────
-let currentUser = null;
-
-async function checkAuth() {
-  try {
-    const res = await fetch(API + '/auth/me', { credentials: 'include' });
-    if (!res.ok) { window.location.href = 'login.html'; return; }
-    currentUser = await res.json();
-    sessionStorage.setItem('rc_user', JSON.stringify(currentUser));
-    applyRoleUI();
-    updateUserBadge();
-  } catch {
-    window.location.href = 'login.html';
-  }
-}
-
-function applyRoleUI() {
-  const role = currentUser?.role;
-  if (role === 'Viewer') {
-    document.querySelectorAll('.write-only').forEach(el => el.style.display = 'none');
-  }
-  if (role !== 'Admin') {
-    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
-  }
-}
-
-function updateUserBadge() {
-  const badge = document.getElementById('user-badge');
-  if (!badge || !currentUser) return;
-  const roleColors = { Admin: '#3b82f6', Dispatcher: '#f59e0b', Viewer: '#6b7280' };
-  badge.innerHTML = `
-    <span style="font-size:12px;color:var(--rc-muted)">${currentUser.name}</span>
-    <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;background:${roleColors[currentUser.role]}22;color:${roleColors[currentUser.role]}">${currentUser.role}</span>`;
-}
-
-async function logout() {
-  await fetch(API + '/auth/logout', { method: 'POST', credentials: 'include' });
-  sessionStorage.removeItem('rc_user');
-  window.location.href = 'login.html';
-}
-
-// ── Team Management ───────────────────────────────────────────
-let teamMembers = [];
-
-async function loadTeam() {
-  try {
-    teamMembers = await apiFetch('/auth/users');
-    renderTeam();
-  } catch (e) { showToast('Failed to load team: ' + e.message, '#f87171'); }
-}
-
-function roleClass(r) {
-  const map = { Admin: 'badge-transit', Dispatcher: 'badge-pending', Viewer: 'badge-cancelled' };
-  return 'badge ' + (map[r] || 'badge-cancelled');
-}
-
-function renderTeam() {
-  const tbody = document.getElementById('team-tbody');
-  document.getElementById('team-count').textContent = teamMembers.length + ' member' + (teamMembers.length !== 1 ? 's' : '');
-  if (!teamMembers.length) { tbody.innerHTML = '<tr class="loading-row"><td colspan="6">No team members yet.</td></tr>'; return; }
-  tbody.innerHTML = teamMembers.map(u => `
-    <tr>
-      <td class="id-cell">${u.id}</td>
-      <td style="font-weight:600">${u.name}${u.id === currentUser?.id ? ' <span style="font-size:10px;color:var(--rc-muted)">(you)</span>' : ''}</td>
-      <td style="font-size:12px;color:var(--rc-muted)">${u.email}</td>
-      <td><span class="${roleClass(u.role)}">${u.role}</span></td>
-      <td class="id-cell">${u.created_at}</td>
-      <td><div class="actions">
-        ${u.id !== currentUser?.id ? `<button class="btn btn-danger" onclick="deleteTeamMember('${u.id}','${u.name}')">Remove</button>` : '<span style="font-size:12px;color:var(--rc-muted)">—</span>'}
-      </div></td>
-    </tr>`).join('');
-}
-
-async function deleteTeamMember(id, name) {
-  if (!confirm(`Remove ${name} from the team?`)) return;
-  try {
-    await apiFetch('/auth/users/' + id, { method: 'DELETE' });
-    teamMembers = teamMembers.filter(u => u.id !== id);
-    renderTeam();
-    showToast(name + ' removed from team', '#f87171');
-  } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-}
-
-
-// ── Override apiFetch to include credentials ──────────────────
-const _baseApiFetch = apiFetch;
-async function apiFetch(path, options = {}) {
-  const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    ...options,
-  });
-  if (res.status === 401) { window.location.href = 'login.html'; return; }
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(err.error || `HTTP ${res.status}`);
-  }
-  return res.status === 204 ? null : res.json();
-}
-
-// ── Boot ──────────────────────────────────────────────────────
-checkAuth().then(() => {
-  checkHealth();
-  loadAll();
-});
+// ─── BOOT ─────────────────────────────────────────────────────
+checkAuth().then(()=>{ checkHealth(); loadAll(); });
 </script>
 </body>
 </html>
