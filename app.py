@@ -16,14 +16,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["http://127.0.0.1:5500", "http://localhost:5500", "https://tannermc23.github.io"])
+CORS(app, origins=[
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "https://tannermc23.github.io"
+])
 
 with app.app_context():
     init_db()
 
 ALERT_EMAIL = os.environ.get("ALERT_EMAIL", os.environ.get("FROM_EMAIL", ""))
-
-# Token store: { token: { user_id, role, name, email } }
 active_tokens = {}
 
 
@@ -47,7 +49,7 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
-def get_token():
+def get_token_from_request():
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         return auth[7:]
@@ -58,7 +60,7 @@ def require_auth(roles=None):
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
-            token = get_token()
+            token = get_token_from_request()
             if not token or token not in active_tokens:
                 return jsonify({"error": "Unauthorized — please log in"}), 401
             user_data = active_tokens[token]
@@ -70,7 +72,7 @@ def require_auth(roles=None):
     return decorator
 
 
-def get_customer_name(db, customer_id):
+def get_customer_name(db, customer_id: str) -> str:
     row = db.execute("SELECT name FROM customers WHERE id = ?", (customer_id,)).fetchone()
     return row["name"] if row else customer_id
 
@@ -100,18 +102,13 @@ def login():
         "name":    user["name"],
         "role":    user["role"],
     }
-    return jsonify({
-        "token": token,
-        "id":    user["id"],
-        "name":  user["name"],
-        "email": user["email"],
-        "role":  user["role"],
-    }), 200
+    return jsonify({"token": token, "id": user["id"], "name": user["name"],
+                    "email": user["email"], "role": user["role"]}), 200
 
 
 @app.route("/auth/logout", methods=["POST"])
 def logout():
-    token = get_token()
+    token = get_token_from_request()
     if token and token in active_tokens:
         del active_tokens[token]
     return jsonify({"message": "Logged out"}), 200
@@ -119,16 +116,12 @@ def logout():
 
 @app.route("/auth/me", methods=["GET"])
 def me():
-    token = get_token()
+    token = get_token_from_request()
     if not token or token not in active_tokens:
         return jsonify({"error": "Not authenticated"}), 401
     user = active_tokens[token]
-    return jsonify({
-        "id":    user["user_id"],
-        "name":  user["name"],
-        "email": user["email"],
-        "role":  user["role"],
-    }), 200
+    return jsonify({"id": user["user_id"], "name": user["name"],
+                    "email": user["email"], "role": user["role"]}), 200
 
 
 @app.route("/auth/register", methods=["POST"])
@@ -143,7 +136,7 @@ def register():
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 422
     valid_roles = {"Admin", "Dispatcher", "Viewer"}
     if data["role"] not in valid_roles:
-        return jsonify({"error": f"Role must be one of: {', '.join(valid_roles)}"}), 422
+        return jsonify({"error": "Invalid role"}), 422
     if len(data["password"]) < 6:
         return jsonify({"error": "Password must be at least 6 characters"}), 422
     db       = get_db()
@@ -169,7 +162,9 @@ def register():
 @require_auth(["Admin"])
 def get_users():
     db   = get_db()
-    rows = db.execute("SELECT id, name, email, role, created_at FROM users ORDER BY created_at ASC").fetchall()
+    rows = db.execute(
+        "SELECT id, name, email, role, created_at FROM users ORDER BY created_at ASC"
+    ).fetchall()
     return jsonify([dict(r) for r in rows]), 200
 
 
@@ -185,10 +180,8 @@ def update_user(user_id):
     if "role" in data and data["role"] not in valid_roles:
         return jsonify({"error": "Invalid role"}), 422
     current = dict(row)
-    db.execute(
-        "UPDATE users SET name=?, role=? WHERE id=?",
-        (data.get("name", current["name"]), data.get("role", current["role"]), user_id),
-    )
+    db.execute("UPDATE users SET name=?, role=? WHERE id=?",
+               (data.get("name", current["name"]), data.get("role", current["role"]), user_id))
     db.commit()
     updated = db.execute(
         "SELECT id, name, email, role, created_at FROM users WHERE id = ?", (user_id,)
@@ -211,6 +204,167 @@ def delete_user(user_id):
 
 
 # ─────────────────────────────────────────
+#  TASK ENDPOINTS
+# ─────────────────────────────────────────
+
+VALID_TASK_STATUSES   = {"To Do", "In Progress", "Done", "Cancelled"}
+VALID_TASK_PRIORITIES = {"Low", "Medium", "High", "Urgent"}
+VALID_TASK_CATEGORIES = {"General", "Pickup", "Delivery", "Inspection", "Admin", "Other"}
+
+
+@app.route("/tasks", methods=["GET"])
+@require_auth()
+def get_tasks():
+    """Return all tasks. Optional ?status= and ?assigned_user= filters."""
+    db = get_db()
+    status_filter = request.args.get("status")
+    user_filter   = request.args.get("assigned_user")
+
+    query  = "SELECT * FROM tasks WHERE 1=1"
+    params = []
+    if status_filter:
+        query += " AND status = ?"
+        params.append(status_filter)
+    if user_filter:
+        query += " AND assigned_user = ?"
+        params.append(user_filter)
+    query += " ORDER BY CASE priority WHEN 'Urgent' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4 END, due_date ASC"
+
+    rows = db.execute(query, params).fetchall()
+    return jsonify([dict(r) for r in rows]), 200
+
+
+@app.route("/tasks/calendar", methods=["GET"])
+@require_auth()
+def get_calendar():
+    """
+    Return tasks with due dates + shipment ETAs for a given month.
+    Usage: GET /tasks/calendar?year=2026&month=4
+    """
+    db    = get_db()
+    year  = request.args.get("year",  datetime.now(timezone.utc).year)
+    month = request.args.get("month", datetime.now(timezone.utc).month)
+    prefix = f"{year}-{str(month).zfill(2)}"
+
+    tasks = db.execute(
+        "SELECT * FROM tasks WHERE due_date LIKE ? ORDER BY due_date ASC",
+        (prefix + "%",)
+    ).fetchall()
+
+    shipments = db.execute(
+        "SELECT id, customer_id, origin, destination, status, shipment_type, eta FROM shipments WHERE eta LIKE ?",
+        (prefix + "%",)
+    ).fetchall()
+
+    return jsonify({
+        "tasks":     [dict(r) for r in tasks],
+        "shipments": [dict(r) for r in shipments],
+        "year":      int(year),
+        "month":     int(month),
+    }), 200
+
+
+@app.route("/tasks/<string:task_id>", methods=["GET"])
+@require_auth()
+def get_task(task_id):
+    db  = get_db()
+    row = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Task not found"}), 404
+    return jsonify(dict(row)), 200
+
+
+@app.route("/tasks", methods=["POST"])
+@require_auth(["Admin", "Dispatcher"])
+def create_task():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Request body must be JSON"}), 400
+    if not data.get("title"):
+        return jsonify({"error": "Title is required"}), 422
+    if data.get("status") and data["status"] not in VALID_TASK_STATUSES:
+        return jsonify({"error": "Invalid status"}), 422
+    if data.get("priority") and data["priority"] not in VALID_TASK_PRIORITIES:
+        return jsonify({"error": "Invalid priority"}), 422
+
+    db    = get_db()
+    count = db.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+    tid   = f"TSK-{(count + 1):04d}"
+
+    db.execute(
+        """INSERT INTO tasks
+           (id, title, description, status, priority, category,
+            due_date, assigned_user, assigned_driver, shipment_id,
+            created_by, created_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            tid,
+            data["title"],
+            data.get("description", ""),
+            data.get("status", "To Do"),
+            data.get("priority", "Medium"),
+            data.get("category", "General"),
+            data.get("due_date", ""),
+            data.get("assigned_user", ""),
+            data.get("assigned_driver", ""),
+            data.get("shipment_id", ""),
+            request.current_user["user_id"],
+            datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        ),
+    )
+    db.commit()
+    new_row = db.execute("SELECT * FROM tasks WHERE id = ?", (tid,)).fetchone()
+    return jsonify(dict(new_row)), 201
+
+
+@app.route("/tasks/<string:task_id>", methods=["PUT"])
+@require_auth(["Admin", "Dispatcher"])
+def update_task(task_id):
+    db  = get_db()
+    row = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Task not found"}), 404
+    data = request.get_json(silent=True) or {}
+    if data.get("status") and data["status"] not in VALID_TASK_STATUSES:
+        return jsonify({"error": "Invalid status"}), 422
+    if data.get("priority") and data["priority"] not in VALID_TASK_PRIORITIES:
+        return jsonify({"error": "Invalid priority"}), 422
+    current = dict(row)
+    db.execute(
+        """UPDATE tasks SET title=?, description=?, status=?, priority=?,
+           category=?, due_date=?, assigned_user=?, assigned_driver=?, shipment_id=?
+           WHERE id=?""",
+        (
+            data.get("title",           current["title"]),
+            data.get("description",     current.get("description", "")),
+            data.get("status",          current["status"]),
+            data.get("priority",        current["priority"]),
+            data.get("category",        current.get("category", "General")),
+            data.get("due_date",        current.get("due_date", "")),
+            data.get("assigned_user",   current.get("assigned_user", "")),
+            data.get("assigned_driver", current.get("assigned_driver", "")),
+            data.get("shipment_id",     current.get("shipment_id", "")),
+            task_id,
+        ),
+    )
+    db.commit()
+    refreshed = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    return jsonify(dict(refreshed)), 200
+
+
+@app.route("/tasks/<string:task_id>", methods=["DELETE"])
+@require_auth(["Admin", "Dispatcher"])
+def delete_task(task_id):
+    db  = get_db()
+    row = db.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "Task not found"}), 404
+    db.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    db.commit()
+    return jsonify({"message": f"Task {task_id} deleted"}), 200
+
+
+# ─────────────────────────────────────────
 #  SHIPMENT ENDPOINTS
 # ─────────────────────────────────────────
 
@@ -219,10 +373,15 @@ def delete_user(user_id):
 def get_shipments():
     db = get_db()
     status_filter = request.args.get("status")
+    type_filter   = request.args.get("type")
+    query  = "SELECT * FROM shipments WHERE 1=1"
+    params = []
     if status_filter:
-        rows = db.execute("SELECT * FROM shipments WHERE status = ? ORDER BY created_at DESC", (status_filter,)).fetchall()
-    else:
-        rows = db.execute("SELECT * FROM shipments ORDER BY created_at DESC").fetchall()
+        query += " AND status = ?"; params.append(status_filter)
+    if type_filter:
+        query += " AND shipment_type = ?"; params.append(type_filter)
+    query += " ORDER BY created_at DESC"
+    rows = db.execute(query, params).fetchall()
     return jsonify([dict(r) for r in rows]), 200
 
 
@@ -236,11 +395,18 @@ def search_shipments():
     pattern = f"%{q}%"
     rows    = db.execute(
         """SELECT * FROM shipments
-           WHERE id LIKE ? OR customer_id LIKE ? OR origin LIKE ?
-              OR destination LIKE ? OR status LIKE ? OR carrier LIKE ?
-              OR tracking_number LIKE ? OR container_number LIKE ? OR notes LIKE ?
+           WHERE id               LIKE ?
+              OR customer_id      LIKE ?
+              OR origin           LIKE ?
+              OR destination      LIKE ?
+              OR status           LIKE ?
+              OR shipment_type    LIKE ?
+              OR carrier          LIKE ?
+              OR tracking_number  LIKE ?
+              OR container_number LIKE ?
+              OR notes            LIKE ?
            ORDER BY created_at DESC""",
-        (pattern,) * 9,
+        (pattern,) * 10,
     ).fetchall()
     return jsonify([dict(r) for r in rows]), 200
 
@@ -273,15 +439,18 @@ def create_shipment():
     sid   = f"SHP-{(count + 1):04d}"
     db.execute(
         """INSERT INTO shipments
-           (id, customer_id, origin, destination, status,
+           (id, customer_id, origin, destination, status, shipment_type,
             carrier, tracking_number, container_number, eta, notes,
             driver_id, dispatch_sent, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?)""",
-        (sid, data["customer_id"], data["origin"], data["destination"], data["status"],
-         data.get("carrier",""), data.get("tracking_number",""),
-         data.get("container_number",""), data.get("eta",""),
-         data.get("notes",""), data.get("driver_id",""),
-         datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)""",
+        (
+            sid, data["customer_id"], data["origin"], data["destination"],
+            data["status"], data.get("shipment_type", "Other"),
+            data.get("carrier", ""), data.get("tracking_number", ""),
+            data.get("container_number", ""), data.get("eta", ""),
+            data.get("notes", ""), data.get("driver_id", ""),
+            datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        ),
     )
     db.commit()
     shipment = dict(db.execute("SELECT * FROM shipments WHERE id = ?", (sid,)).fetchone())
@@ -312,28 +481,35 @@ def update_shipment(shipment_id):
         "origin":           data.get("origin",           current["origin"]),
         "destination":      data.get("destination",      current["destination"]),
         "status":           data.get("status",           current["status"]),
-        "carrier":          data.get("carrier",          current.get("carrier","")),
-        "tracking_number":  data.get("tracking_number",  current.get("tracking_number","")),
-        "container_number": data.get("container_number", current.get("container_number","")),
-        "eta":              data.get("eta",              current.get("eta","")),
-        "notes":            data.get("notes",            current.get("notes","")),
-        "driver_id":        data.get("driver_id",        current.get("driver_id","")),
+        "shipment_type":    data.get("shipment_type",    current.get("shipment_type", "Other")),
+        "carrier":          data.get("carrier",          current.get("carrier", "")),
+        "tracking_number":  data.get("tracking_number",  current.get("tracking_number", "")),
+        "container_number": data.get("container_number", current.get("container_number", "")),
+        "eta":              data.get("eta",              current.get("eta", "")),
+        "notes":            data.get("notes",            current.get("notes", "")),
+        "driver_id":        data.get("driver_id",        current.get("driver_id", "")),
     }
     db.execute(
-        """UPDATE shipments SET customer_id=?, origin=?, destination=?, status=?,
-               carrier=?, tracking_number=?, container_number=?, eta=?, notes=?, driver_id=?
+        """UPDATE shipments
+           SET customer_id=?, origin=?, destination=?, status=?, shipment_type=?,
+               carrier=?, tracking_number=?, container_number=?,
+               eta=?, notes=?, driver_id=?
            WHERE id=?""",
-        (updated["customer_id"], updated["origin"], updated["destination"], updated["status"],
-         updated["carrier"], updated["tracking_number"], updated["container_number"],
-         updated["eta"], updated["notes"], updated["driver_id"], shipment_id),
+        (
+            updated["customer_id"], updated["origin"], updated["destination"],
+            updated["status"], updated["shipment_type"], updated["carrier"],
+            updated["tracking_number"], updated["container_number"],
+            updated["eta"], updated["notes"], updated["driver_id"], shipment_id,
+        ),
     )
     db.commit()
-    refreshed = dict(db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone())
-    if ALERT_EMAIL and updated["status"] != previous_status:
+    refreshed  = dict(db.execute("SELECT * FROM shipments WHERE id = ?", (shipment_id,)).fetchone())
+    new_status = updated["status"]
+    if ALERT_EMAIL and new_status != previous_status:
         customer_name = get_customer_name(db, refreshed["customer_id"])
-        if updated["status"] == "Delayed":
+        if new_status == "Delayed":
             send_delay_alert(ALERT_EMAIL, refreshed, customer_name)
-        elif updated["status"] == "Delivered":
+        elif new_status == "Delivered":
             send_delivery_confirmation(ALERT_EMAIL, refreshed, customer_name)
     return jsonify(refreshed), 200
 
@@ -362,7 +538,7 @@ def dispatch_shipment(shipment_id):
         send_dispatch_notification(ALERT_EMAIL, refreshed, driver)
     return jsonify({
         "shipment": refreshed, "driver": driver,
-        "message": f"Dispatched. Driver {driver['name']} notified for {shipment_id}."
+        "message":  f"Dispatched. Driver {driver['name']} notified for {shipment_id}."
     }), 200
 
 
@@ -405,8 +581,9 @@ def create_driver():
     drv_id = f"DRV-{(count + 1):03d}"
     db.execute(
         "INSERT INTO drivers (id, name, phone, email, license, carrier, status, notes, created_at) VALUES (?,?,?,?,?,?,'Available',?,?)",
-        (drv_id, data["name"], data["phone"], data.get("email",""), data.get("license",""),
-         data.get("carrier",""), data.get("notes",""), datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        (drv_id, data["name"], data["phone"], data.get("email",""),
+         data.get("license",""), data.get("carrier",""), data.get("notes",""),
+         datetime.now(timezone.utc).strftime("%Y-%m-%d")),
     )
     db.commit()
     return jsonify(dict(db.execute("SELECT * FROM drivers WHERE id = ?", (drv_id,)).fetchone())), 201
