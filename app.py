@@ -673,6 +673,67 @@ def delete_customer(customer_id):
 
 
 # ─────────────────────────────────────────
+#  WAITLIST
+# ─────────────────────────────────────────
+
+@app.route("/waitlist", methods=["POST"])
+def join_waitlist():
+    """Public endpoint — no auth required. Saves email and notifies admin."""
+    data = request.get_json(silent=True)
+    if not data or not data.get("email"):
+        return jsonify({"error": "Email is required"}), 422
+
+    email = data["email"].strip().lower()
+    if "@" not in email:
+        return jsonify({"error": "Invalid email address"}), 422
+
+    db = get_db()
+    existing = db.execute("SELECT id FROM waitlist WHERE email = ?", (email,)).fetchone()
+    if existing:
+        return jsonify({"message": "Already on the waitlist"}), 409
+
+    db.execute(
+        "INSERT INTO waitlist (email, created_at) VALUES (?, ?)",
+        (email, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")),
+    )
+    db.commit()
+
+    # Notify admin by email
+    if ALERT_EMAIL:
+        count = db.execute("SELECT COUNT(*) FROM waitlist").fetchone()[0]
+        try:
+            import resend as resend_client
+            resend_client.api_key = os.environ.get("RESEND_API_KEY", "")
+            resend_client.Emails.send({
+                "from":    os.environ.get("FROM_EMAIL", "onboarding@resend.dev"),
+                "to":      [ALERT_EMAIL],
+                "subject": f"🎉 New Waitlist Signup — {email}",
+                "html":    f"""
+                    <div style="font-family:sans-serif;background:#0a0c10;color:#e8eaf0;padding:32px;border-radius:12px;">
+                        <h2 style="color:#3b82f6;margin-bottom:8px;">New Waitlist Signup</h2>
+                        <p style="color:#6b7280;margin-bottom:24px;">Someone just joined the RouteCore waitlist.</p>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <tr><td style="padding:8px 0;color:#6b7280;width:120px">Email</td><td style="padding:8px 0;font-weight:600">{email}</td></tr>
+                            <tr><td style="padding:8px 0;color:#6b7280">Total signups</td><td style="padding:8px 0;font-weight:600">{count}</td></tr>
+                        </table>
+                    </div>""",
+            })
+        except Exception:
+            pass  # Don't fail the signup if email fails
+
+    return jsonify({"message": "Successfully joined the waitlist"}), 201
+
+
+@app.route("/waitlist", methods=["GET"])
+@require_auth(["Admin"])
+def get_waitlist():
+    """Admin only — view all waitlist signups."""
+    db   = get_db()
+    rows = db.execute("SELECT * FROM waitlist ORDER BY created_at DESC").fetchall()
+    return jsonify([dict(r) for r in rows]), 200
+
+
+# ─────────────────────────────────────────
 #  PUBLIC CUSTOMER PORTAL
 # ─────────────────────────────────────────
 

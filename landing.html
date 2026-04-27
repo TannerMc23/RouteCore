@@ -911,6 +911,41 @@ footer {
   </div>
 </section>
 
+<!-- Waitlist -->
+<section id="waitlist" style="background:var(--bg);border-top:1px solid var(--border);">
+  <div class="section-inner" style="max-width:680px;text-align:center;">
+    <div class="section-label">Early Access</div>
+    <h2 class="section-title">Be First in Line</h2>
+    <p style="font-size:17px;color:var(--muted);margin-bottom:40px;line-height:1.65;">
+      RouteCore is currently in early access. Join the waitlist and we'll reach out when your spot is ready — no spam, no commitment.
+    </p>
+
+    <div id="waitlist-form">
+      <div style="display:flex;gap:10px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:8px;max-width:520px;margin:0 auto 16px;">
+        <input type="email" id="wl-email" placeholder="Enter your work email"
+          style="flex:1;background:transparent;border:none;outline:none;font-family:var(--font-body);font-size:15px;color:var(--text);padding:6px 10px;"
+          onkeydown="if(event.key==='Enter')submitWaitlist()"/>
+        <button onclick="submitWaitlist()" id="wl-btn"
+          style="background:var(--accent);color:white;border:none;border-radius:7px;padding:11px 24px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-body);transition:all 0.15s;white-space:nowrap;">
+          Join Waitlist
+        </button>
+      </div>
+      <div id="wl-error" style="color:#f87171;font-size:13px;margin-bottom:8px;display:none;"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:13px;color:var(--muted);flex-wrap:wrap;">
+        <span>✓ No credit card</span>
+        <span>✓ No spam ever</span>
+        <span>✓ Cancel anytime</span>
+      </div>
+    </div>
+
+    <div id="waitlist-success" style="display:none;background:rgba(0,201,167,0.08);border:1px solid rgba(0,201,167,0.25);border-radius:12px;padding:28px;max-width:480px;margin:0 auto;">
+      <div style="font-size:32px;margin-bottom:12px;">🎉</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#00c9a7;">You're on the list!</div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.6;">We'll be in touch soon with early access details. Keep an eye on your inbox.</div>
+    </div>
+  </div>
+</section>
+
 <!-- CTA -->
 <section class="cta-section" id="contact">
   <div class="section-inner">
@@ -934,10 +969,59 @@ footer {
     <a href="#pricing">Pricing</a>
     <a href="#how">How It Works</a>
     <a href="index.html">Dashboard</a>
-    <a href="mailto:tannermcmillan23@gmail.com">Contact</a>
+    <a href="mailto:hello@routecore.io">Contact</a>
   </div>
   <div class="footer-copy">© 2026 RouteCore. All rights reserved.</div>
 </footer>
 
+<script>
+const API = 'http://127.0.0.1:5000'; // local dev: http://127.0.0.1:5000 https://routecore.onrender.com
+
+async function submitWaitlist() {
+  const email = document.getElementById('wl-email').value.trim();
+  const btn   = document.getElementById('wl-btn');
+  const err   = document.getElementById('wl-error');
+
+  err.style.display = 'none';
+
+  if (!email || !email.includes('@')) {
+    err.textContent = 'Please enter a valid email address.';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Joining…';
+
+  try {
+    const res  = await fetch(API + '/waitlist', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email }),
+    });
+    const data = await res.json();
+
+    if (res.status === 409) {
+      // Already on the list — still show success, no reason to be rude
+      document.getElementById('waitlist-form').style.display    = 'none';
+      document.getElementById('waitlist-success').style.display = 'block';
+      return;
+    }
+
+    if (!res.ok) {
+      err.textContent = data.error || 'Something went wrong. Please try again.';
+      err.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('waitlist-form').style.display    = 'none';
+    document.getElementById('waitlist-success').style.display = 'block';
+  } catch {
+    err.textContent = 'Could not connect. Please try again.';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Join Waitlist';
+  }
+}
+</script>
 </body>
 </html>

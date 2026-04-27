@@ -44,6 +44,12 @@ def init_db():
     db.executescript("""
         PRAGMA journal_mode=WAL;
 
+        CREATE TABLE IF NOT EXISTS waitlist (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            email      TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS users (
             id         TEXT PRIMARY KEY,
             name       TEXT NOT NULL,
