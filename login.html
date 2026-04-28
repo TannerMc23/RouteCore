@@ -187,16 +187,18 @@ body::before {
   }
 
   // If already logged in, go straight to dashboard
+ const isAddUserMode = window.location.search.includes('adduser');
+
+if (!isAddUserMode) {
   window.addEventListener('load', async () => {
-  const token = getToken();
-  if (!token) return;
-  // If ?adduser is in the URL, stay on this page so admin can add users
-  if (window.location.search.includes('adduser')) return;
-  try {
-    const res = await fetch(API+'/auth/me', { headers:{'Authorization':'Bearer '+token} });
-    if (res.ok) window.location.href = 'index.html';
-  } catch {}
-});
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(API+'/auth/me', { headers:{'Authorization':'Bearer '+token} });
+      if (res.ok) window.location.href = 'index.html';
+    } catch {}
+  });
+}
 </script>
 </body>
 </html>
