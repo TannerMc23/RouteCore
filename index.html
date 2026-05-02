@@ -1373,8 +1373,10 @@
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
                 </svg>
+                input type="text" style="display:none" autocomplete="username"/>
+                <input type="password" style="display:none" autocomplete="current-password" />
                 <input class="search-input" id="search-input" placeholder="Search shipments…"
-                  oninput="onSearch(this.value)" autocomplete="new-password"/>
+                  oninput="onSearch(this.value)" autocomplete="off" />
               </div>
               <span id="record-count" style="font-size:12px;color:var(--rc-muted);white-space:nowrap;"></span>
             </div>
@@ -1719,7 +1721,7 @@
         </div>
       </div>
 
-      
+
       <!-- TEAM -->
       <div id="view-team" style="display:none">
         <div class="page-header">
@@ -2086,26 +2088,26 @@
       finally { btn.disabled = false; btn.textContent = 'Create Shipment'; }
     }
 
- async function deleteShipment(id) {
-  try {
-    await apiFetch('/shipments/'+id, {method:'DELETE'});
-    shipments = shipments.filter(s => s.id !== id);
-    
-    // Remove just that row directly from the DOM
-    const row = document.querySelector(`button[onclick="deleteShipment('${id}')"]`)?.closest('tr');
-    if (row) row.remove();
-    
-    // Update count and stats
-    const visibleRows = document.querySelectorAll('#shipment-tbody tr').length;
-    document.getElementById('record-count').textContent = visibleRows + ' record' + (visibleRows !== 1 ? 's' : '');
-    if (visibleRows === 0) {
-      document.getElementById('shipment-tbody').innerHTML = '';
-      document.getElementById('empty-state').style.display = 'block';
+    async function deleteShipment(id) {
+      try {
+        await apiFetch('/shipments/' + id, { method: 'DELETE' });
+        shipments = shipments.filter(s => s.id !== id);
+
+        // Remove just that row directly from the DOM
+        const row = document.querySelector(`button[onclick="deleteShipment('${id}')"]`)?.closest('tr');
+        if (row) row.remove();
+
+        // Update count and stats
+        const visibleRows = document.querySelectorAll('#shipment-tbody tr').length;
+        document.getElementById('record-count').textContent = visibleRows + ' record' + (visibleRows !== 1 ? 's' : '');
+        if (visibleRows === 0) {
+          document.getElementById('shipment-tbody').innerHTML = '';
+          document.getElementById('empty-state').style.display = 'block';
+        }
+        updateStats();
+        showToast('Shipment ' + id + ' deleted', '#f87171');
+      } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
     }
-    updateStats();
-    showToast('Shipment '+id+' deleted', '#f87171');
-  } catch(e) { showToast('Error: '+e.message, '#f87171'); }
-}
 
     async function saveEdit() {
       const btn = document.getElementById('btn-save-edit');
@@ -2454,23 +2456,23 @@
     }
 
     async function createUser() {
-  const name     = document.getElementById('u-name').value.trim();
-  const email    = document.getElementById('u-email').value.trim();
-  const password = document.getElementById('u-password').value;
-  const role     = document.getElementById('u-role').value;
-  if (!name || !email || !password) { showToast('All fields are required', '#f59e0b'); return; }
-  const btn = document.getElementById('btn-add-user');
-  btn.disabled = true; btn.textContent = 'Creating…';
-  try {
-    const user = await apiFetch('/auth/register', { method:'POST', body:JSON.stringify({name, email, password, role}) });
-    teamMembers.push(user);
-    ['u-name','u-email','u-password'].forEach(id => document.getElementById(id).value = '');
-    toggleForm('add-user-panel');
-    renderTeam();
-    showToast(user.name + ' added as ' + user.role, '#34d399');
-  } catch(e) { showToast('Error: ' + e.message, '#f87171'); }
-  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
-}
+      const name = document.getElementById('u-name').value.trim();
+      const email = document.getElementById('u-email').value.trim();
+      const password = document.getElementById('u-password').value;
+      const role = document.getElementById('u-role').value;
+      if (!name || !email || !password) { showToast('All fields are required', '#f59e0b'); return; }
+      const btn = document.getElementById('btn-add-user');
+      btn.disabled = true; btn.textContent = 'Creating…';
+      try {
+        const user = await apiFetch('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, role }) });
+        teamMembers.push(user);
+        ['u-name', 'u-email', 'u-password'].forEach(id => document.getElementById(id).value = '');
+        toggleForm('add-user-panel');
+        renderTeam();
+        showToast(user.name + ' added as ' + user.role, '#34d399');
+      } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
+      finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+    }
 
     // ─── TEAM ─────────────────────────────────────────────────────
     async function loadTeam() {
@@ -2813,6 +2815,11 @@
         populateUserDropdowns();
         renderTeam();
       } catch { }
+    });
+
+    window.addEventListener('load', () => {
+      const si = document.getElementById('search-input');
+      if (si) si.value = '';
     });
   </script>
 </body>
