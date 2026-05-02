@@ -2086,13 +2086,18 @@
       finally { btn.disabled = false; btn.textContent = 'Create Shipment'; }
     }
 
-    async function deleteShipment(id) {
+  async function deleteShipment(id) {
   try {
     await apiFetch('/shipments/'+id, {method:'DELETE'});
     shipments = shipments.filter(s => s.id !== id);
-    searchQuery = '';
-    document.getElementById('search-input').value = '';
-    renderShipments();
+    
+    // Remove just that row from the DOM directly — no re-render needed
+    const row = document.querySelector(`button[onclick="deleteShipment('${id}')"]`)?.closest('tr');
+    if (row) row.remove();
+    
+    // Update the record count and stats
+    const visibleRows = document.querySelectorAll('#shipment-tbody tr:not(.loading-row)').length;
+    document.getElementById('record-count').textContent = visibleRows + ' record' + (visibleRows !== 1 ? 's' : '');
     updateStats();
     showToast('Shipment '+id+' deleted', '#f87171');
   } catch(e) { showToast('Error: '+e.message, '#f87171'); }
