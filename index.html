@@ -2087,13 +2087,16 @@
     }
 
     async function deleteShipment(id) {
-      try {
-        await apiFetch('/shipments/' + id, { method: 'DELETE' });
-        shipments = shipments.filter(s => s.id !== id);
-        renderShipments(); updateStats(); populateShipmentDropdown();
-        showToast('Shipment ' + id + ' deleted', '#f87171');
-      } catch (e) { showToast('Error: ' + e.message, '#f87171'); }
-    }
+  try {
+    await apiFetch('/shipments/'+id,{method:'DELETE'});
+    shipments = shipments.filter(s => s.id !== id);
+    // Force re-render the current visible list directly
+    const list = filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
+    renderTable(list);
+    updateStats();
+    showToast('Shipment '+id+' deleted','#f87171');
+  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+}
 
     async function saveEdit() {
       const btn = document.getElementById('btn-save-edit');
