@@ -2088,14 +2088,14 @@
 
     async function deleteShipment(id) {
   try {
-    await apiFetch('/shipments/'+id,{method:'DELETE'});
+    await apiFetch('/shipments/'+id, {method:'DELETE'});
     shipments = shipments.filter(s => s.id !== id);
-    // Force re-render the current visible list directly
-    const list = filterStatus === 'all' ? shipments : shipments.filter(s => s.status === filterStatus);
-    renderTable(list);
+    searchQuery = '';
+    document.getElementById('search-input').value = '';
+    renderShipments();
     updateStats();
-    showToast('Shipment '+id+' deleted','#f87171');
-  } catch(e) { showToast('Error: '+e.message,'#f87171'); }
+    showToast('Shipment '+id+' deleted', '#f87171');
+  } catch(e) { showToast('Error: '+e.message, '#f87171'); }
 }
 
     async function saveEdit() {
