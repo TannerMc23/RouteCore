@@ -1,13 +1,22 @@
-import sqlite3
+import os
+import psycopg2
+import psycopg2.extras
 from flask import g, current_app
+from dotenv import load_dotenv
 
-DATABASE = "routecore.db"
+load_dotenv()
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
 
 
 def get_db():
+    """Open a PostgreSQL connection scoped to the current request."""
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE, detect_types=sqlite3.PARSE_DECLTYPES)
-        g.db.row_factory = sqlite3.Row
+        # Render provides DATABASE_URL starting with postgres:// but
+        # psycopg2 requires postgresql://
+        url = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        g.db = psycopg2.connect(url)
+        g.db.autocommit = False
     return g.db
 
 
@@ -17,40 +26,20 @@ def close_db(e=None):
         db.close()
 
 
+def _execute(db, sql, params=None):
+    """Execute a statement and return the cursor."""
+    cur = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(sql, params or ())
+    return cur
+
+
 def init_db():
+    """Create all tables if they don't exist."""
     db = get_db()
 
-    # ── Step 1: Migrate existing shipments table ──────────────
-    try:
-        existing_cols = {row[1] for row in db.execute("PRAGMA table_info(shipments)").fetchall()}
-        shipment_migrations = {
-            "carrier":          "ALTER TABLE shipments ADD COLUMN carrier TEXT DEFAULT ''",
-            "tracking_number":  "ALTER TABLE shipments ADD COLUMN tracking_number TEXT DEFAULT ''",
-            "eta":              "ALTER TABLE shipments ADD COLUMN eta TEXT DEFAULT ''",
-            "notes":            "ALTER TABLE shipments ADD COLUMN notes TEXT DEFAULT ''",
-            "driver_id":        "ALTER TABLE shipments ADD COLUMN driver_id TEXT DEFAULT ''",
-            "container_number": "ALTER TABLE shipments ADD COLUMN container_number TEXT DEFAULT ''",
-            "dispatch_sent":    "ALTER TABLE shipments ADD COLUMN dispatch_sent INTEGER DEFAULT 0",
-            "shipment_type":    "ALTER TABLE shipments ADD COLUMN shipment_type TEXT DEFAULT 'Other'",
-        }
-        for col, sql in shipment_migrations.items():
-            if col not in existing_cols:
-                db.execute(sql)
-        db.commit()
-    except Exception:
-        pass
-
-    # ── Step 2: Create all tables ─────────────────────────────
-    db.executescript("""
-        PRAGMA journal_mode=WAL;
-
-        CREATE TABLE IF NOT EXISTS waitlist (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            email      TEXT NOT NULL UNIQUE,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS users (
+    statements = [
+        # Users
+        """CREATE TABLE IF NOT EXISTS users (
             id         TEXT PRIMARY KEY,
             name       TEXT NOT NULL,
             email      TEXT NOT NULL UNIQUE,
@@ -58,17 +47,19 @@ def init_db():
             role       TEXT NOT NULL DEFAULT 'Viewer'
                            CHECK(role IN ('Admin','Dispatcher','Viewer')),
             created_at TEXT NOT NULL
-        );
+        )""",
 
-        CREATE TABLE IF NOT EXISTS customers (
+        # Customers
+        """CREATE TABLE IF NOT EXISTS customers (
             id    TEXT PRIMARY KEY,
             name  TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             phone TEXT DEFAULT '',
             notes TEXT DEFAULT ''
-        );
+        )""",
 
-        CREATE TABLE IF NOT EXISTS drivers (
+        # Drivers
+        """CREATE TABLE IF NOT EXISTS drivers (
             id         TEXT PRIMARY KEY,
             name       TEXT NOT NULL,
             phone      TEXT NOT NULL,
@@ -79,9 +70,10 @@ def init_db():
                            CHECK(status IN ('Available','On Route','Off Duty')),
             notes      TEXT DEFAULT '',
             created_at TEXT NOT NULL
-        );
+        )""",
 
-        CREATE TABLE IF NOT EXISTS shipments (
+        # Shipments
+        """CREATE TABLE IF NOT EXISTS shipments (
             id               TEXT PRIMARY KEY,
             customer_id      TEXT NOT NULL,
             origin           TEXT NOT NULL,
@@ -96,53 +88,49 @@ def init_db():
             notes            TEXT DEFAULT '',
             driver_id        TEXT DEFAULT '',
             dispatch_sent    INTEGER DEFAULT 0,
-            created_at       TEXT NOT NULL,
-            FOREIGN KEY (customer_id) REFERENCES customers(id)
-        );
+            created_at       TEXT NOT NULL
+        )""",
 
-        CREATE TABLE IF NOT EXISTS tasks (
-            id            TEXT PRIMARY KEY,
-            title         TEXT NOT NULL,
-            description   TEXT DEFAULT '',
-            status        TEXT NOT NULL DEFAULT 'To Do'
-                              CHECK(status IN ('To Do','In Progress','Done','Cancelled')),
-            priority      TEXT NOT NULL DEFAULT 'Medium'
-                              CHECK(priority IN ('Low','Medium','High','Urgent')),
-            category      TEXT NOT NULL DEFAULT 'General',
-            due_date      TEXT DEFAULT '',
-            assigned_user TEXT DEFAULT '',
+        # Tasks
+        """CREATE TABLE IF NOT EXISTS tasks (
+            id              TEXT PRIMARY KEY,
+            title           TEXT NOT NULL,
+            description     TEXT DEFAULT '',
+            status          TEXT NOT NULL DEFAULT 'To Do'
+                                CHECK(status IN ('To Do','In Progress','Done','Cancelled')),
+            priority        TEXT NOT NULL DEFAULT 'Medium'
+                                CHECK(priority IN ('Low','Medium','High','Urgent')),
+            category        TEXT NOT NULL DEFAULT 'General',
+            due_date        TEXT DEFAULT '',
+            assigned_user   TEXT DEFAULT '',
             assigned_driver TEXT DEFAULT '',
-            shipment_id   TEXT DEFAULT '',
-            created_by    TEXT DEFAULT '',
-            created_at    TEXT NOT NULL,
-            FOREIGN KEY (shipment_id) REFERENCES shipments(id)
-        );
+            shipment_id     TEXT DEFAULT '',
+            created_by      TEXT DEFAULT '',
+            created_at      TEXT NOT NULL
+        )""",
 
-        CREATE INDEX IF NOT EXISTS idx_shipments_customer  ON shipments(customer_id);
-        CREATE INDEX IF NOT EXISTS idx_shipments_status    ON shipments(status);
-        CREATE INDEX IF NOT EXISTS idx_shipments_carrier   ON shipments(carrier);
-        CREATE INDEX IF NOT EXISTS idx_shipments_driver    ON shipments(driver_id);
-        CREATE INDEX IF NOT EXISTS idx_shipments_type      ON shipments(shipment_type);
-        CREATE INDEX IF NOT EXISTS idx_drivers_status      ON drivers(status);
-        CREATE INDEX IF NOT EXISTS idx_tasks_status        ON tasks(status);
-        CREATE INDEX IF NOT EXISTS idx_tasks_due_date      ON tasks(due_date);
-        CREATE INDEX IF NOT EXISTS idx_tasks_assigned_user ON tasks(assigned_user);
-        CREATE INDEX IF NOT EXISTS idx_users_email         ON users(email);
-    """)
+        # Waitlist
+        """CREATE TABLE IF NOT EXISTS waitlist (
+            id         SERIAL PRIMARY KEY,
+            email      TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+        )""",
+
+        # Indexes
+        "CREATE INDEX IF NOT EXISTS idx_shipments_customer  ON shipments(customer_id)",
+        "CREATE INDEX IF NOT EXISTS idx_shipments_status    ON shipments(status)",
+        "CREATE INDEX IF NOT EXISTS idx_shipments_carrier   ON shipments(carrier)",
+        "CREATE INDEX IF NOT EXISTS idx_shipments_driver    ON shipments(driver_id)",
+        "CREATE INDEX IF NOT EXISTS idx_shipments_type      ON shipments(shipment_type)",
+        "CREATE INDEX IF NOT EXISTS idx_drivers_status      ON drivers(status)",
+        "CREATE INDEX IF NOT EXISTS idx_tasks_status        ON tasks(status)",
+        "CREATE INDEX IF NOT EXISTS idx_tasks_due_date      ON tasks(due_date)",
+        "CREATE INDEX IF NOT EXISTS idx_tasks_assigned_user ON tasks(assigned_user)",
+        "CREATE INDEX IF NOT EXISTS idx_users_email         ON users(email)",
+    ]
+
+    for sql in statements:
+        _execute(db, sql)
+
     db.commit()
-
-    # ── Step 3: Migrate drivers if needed ─────────────────────
-    try:
-        existing_driver_cols = {row[1] for row in db.execute("PRAGMA table_info(drivers)").fetchall()}
-        driver_migrations = {
-            "license": "ALTER TABLE drivers ADD COLUMN license TEXT DEFAULT ''",
-            "carrier": "ALTER TABLE drivers ADD COLUMN carrier TEXT DEFAULT ''",
-        }
-        for col, sql in driver_migrations.items():
-            if col not in existing_driver_cols:
-                db.execute(sql)
-        db.commit()
-    except Exception:
-        pass
-
     current_app.teardown_appcontext(close_db)
